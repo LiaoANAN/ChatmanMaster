@@ -1,4 +1,4 @@
-<h1>📱 ChatApp - Web 即時通訊平台</h1>
+<h1>📱 Chatman - 即時通訊APP(PWA WEB)</h1>
 <p>
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
