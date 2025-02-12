@@ -1,0 +1,148 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<style>
+</style>
+
+<div class="chat-container">
+    <button class="toggle-sidebar">☰</button>
+    <div class="sidebar">
+        <div class="user-list">
+            <div class="user-item">
+                <div class="user-avatar"></div>
+                <span>使用者1</span>
+            </div>
+            <div class="user-item">
+                <div class="user-avatar"></div>
+                <span>使用者2</span>
+            </div>
+        </div>
+    </div>
+    <div class="chat-area">
+        <div class="chat-header">
+            <h2>聊天室</h2>
+        </div>
+        <div class="messages-container" id="messagesList">
+            <!-- Messages will be inserted here -->
+        </div>
+        <div class="input-area">
+            <div class="input-container">
+                <input type="text" id="userInput" placeholder="您的名稱" />
+                <input type="text" id="messageInput" placeholder="輸入訊息..." />
+                <button id="sendButton">發送</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chatHub")
+        .withAutomaticReconnect()
+        .build();
+
+    // 接收訊息的處理函數
+    connection.on("ReceiveMessage", (user, message) => {
+        const currentUser = document.getElementById("userInput").value;
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message " + (user === currentUser ? "sent" : "received");
+
+        const avatarDiv = document.createElement("div");
+        avatarDiv.className = "avatar";
+
+        const wrapperDiv = document.createElement("div");
+        wrapperDiv.className = "message-wrapper";
+
+        const senderDiv = document.createElement("div");
+        senderDiv.className = "message-sender";
+        senderDiv.textContent = user;
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "message-content";
+        contentDiv.textContent = message;
+
+        wrapperDiv.appendChild(senderDiv);
+        wrapperDiv.appendChild(contentDiv);
+
+        if (user === currentUser) {
+            messageDiv.appendChild(wrapperDiv);
+            messageDiv.appendChild(avatarDiv);
+        } else {
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(wrapperDiv);
+        }
+
+        document.getElementById("messagesList").appendChild(messageDiv);
+        messageDiv.scrollIntoView({ behavior: "smooth" });
+    });
+
+    // 發送訊息的處理函數
+    document.getElementById("sendButton").addEventListener("click", async () => {
+        try {
+            if (connection.state === "Connected") {
+                const user = document.getElementById("userInput").value.trim();
+                const message = document.getElementById("messageInput").value.trim();
+
+                if (!user) {
+                    alert("請輸入您的名稱");
+                    return;
+                }
+
+                if (message) {
+                    await connection.invoke("SendMessage", user, message);
+                    document.getElementById("messageInput").value = "";
+                }
+            } else {
+                console.log("未連接到伺服器");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    // 按下Enter鍵發送訊息
+    document.getElementById("messageInput").addEventListener("keypress", async (e) => {
+        if (e.key === "Enter") {
+            document.getElementById("sendButton").click();
+        }
+    });
+
+    // 連接到伺服器
+    async function start() {
+        try {
+            await connection.start();
+            console.log("已連接到伺服器");
+        } catch (err) {
+            console.error(err);
+            setTimeout(start, 5000);
+        }
+    }
+
+    // 側邊欄切換功能
+    const toggleButton = document.querySelector('.toggle-sidebar');
+    const sidebar = document.querySelector('.sidebar');
+
+    toggleButton.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+
+    // 點擊聊天區域時關閉側邊欄
+    document.querySelector('.chat-area').addEventListener('click', () => {
+        sidebar.classList.remove('active');
+    });
+
+    // 在手機端自動隱藏側邊欄
+    function checkScreenSize() {
+        if (window.innerWidth <= 768) {
+            sidebar.classList.remove('active');
+        }
+    }
+
+    window.addEventListener('resize', checkScreenSize);
+    checkScreenSize(); // 初始檢查
+
+    start();
+</script>

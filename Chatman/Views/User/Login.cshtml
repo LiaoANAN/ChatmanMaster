@@ -1,0 +1,74 @@
+﻿
+@{
+    ViewData["Title"] = "Login";
+}
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- 使用 min-h-screen 確保至少佔滿整個螢幕高度，flex 實現置中 -->
+<div class="min-h-screen flex flex-col bg-white">
+    <!-- main 區塊包含所有內容，使用 px-6 添加左右間距 -->
+    <main class="flex-1 flex flex-col px-6 py-8">
+        <!-- 內容區塊，使用 max-w-sm 限制最大寬度並置中 -->
+        <div class="w-full max-w-sm mx-auto">
+            <!-- Logo 區域 -->
+            <div class="text-center mb-8">
+                <img src="https://engineering.fb.com/wp-content/uploads/2009/02/chat.jpg"
+                     alt="Logo"
+                     class="mx-auto mb-4 w-20 h-20 rounded-2xl object-cover">
+                <h1 class="text-2xl font-bold text-gray-800">CHATMAN</h1>
+            </div>
+
+            <!-- 登入表單 -->
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <input type="text" id="txtAccount"
+                           class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-base"
+                           placeholder="電子郵件" required>
+                </div>
+                <div>
+                    <input type="password" id="txtPassword"
+                           class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-base"
+                           placeholder="密碼" required>
+                </div>
+                <div class="flex items-center justify-between text-sm py-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2 h-4 w-4">
+                        <span class="text-gray-600">記住我</span>
+                    </label>
+                    <a href="#" class="text-green-600">忘記密碼？</a>
+                </div>
+                <button type="submit"
+                        class="w-full bg-green-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-green-600 transition duration-200 mt-4">
+                    登入
+                </button>
+            </form>
+
+            <!-- 分隔線 -->
+            <div class="flex items-center my-8">
+                <div class="flex-1 border-t border-gray-300"></div>
+                <span class="px-4 text-gray-500 text-sm">或</span>
+                <div class="flex-1 border-t border-gray-300"></div>
+            </div>
+
+            <!-- 社群登入按鈕 -->
+            <div class="space-y-3">
+                <button class="w-full flex items-center justify-center space-x-3 border border-gray-300 py-3 rounded-xl hover:bg-gray-50">
+                    <span class="text-gray-700">使用 Google 帳號登入</span>
+                </button>
+                <button class="w-full flex items-center justify-center space-x-3 border border-gray-300 py-3 rounded-xl hover:bg-gray-50">
+                    <span class="text-gray-700">使用 Facebook 帳號登入</span>
+                </button>
+                <button class="w-full flex items-center justify-center space-x-3 border border-gray-300 py-3 rounded-xl hover:bg-gray-50">
+                    <span class="text-gray-700">使用 Apple 帳號登入</span>
+                </button>
+            </div>
+
+            <!-- 註冊連結 -->
+            <p class="mt-8 text-center text-gray-600">
+                還沒有帳號？
+                <a href="#" class="text-green-600 font-medium">立即註冊</a>
+            </p>
+        </div>
+    </main>
+</div>
