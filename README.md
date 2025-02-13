@@ -1,5 +1,3 @@
-https://claude.ai/magic-link#8b96b787eaf4f61a7286fa7b8fdd0b85:ZXJpY19saWFvQHp5LXRlY2guY29tLnR3
-
 <h1>📱 Chatman - 即時通訊APP(PWA WEB)</h1>
 <p>
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
