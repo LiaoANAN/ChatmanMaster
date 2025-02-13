@@ -1,150 +1,206 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home";
 }
+
+<link rel="stylesheet" href="~/css/index.min.css" />
 
 <style>
 </style>
 
-<div class="chat-container">
-    <button class="toggle-sidebar">☰</button>
+<div class="home-container">
+    <!-- Left Sidebar -->
     <div class="sidebar">
-        <div class="user-list">
-            <div class="user-item">
-                <div class="user-avatar"></div>
-                <span>使用者1</span>
+        <!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-info">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ48JWGkSOWJegd_jiLj6C5cz-Ityd6OMLR-w&s" alt="User avatar" class="user-avatar">
+                <div class="user-details">
+                    <h3>John Doe</h3>
+                    <p class="status">Online</p>
+                </div>
             </div>
-            <div class="user-item">
-                <div class="user-avatar"></div>
-                <span>使用者2</span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="搜尋...">
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" data-tab="friends">好友列表</button>
+            <button class="tab-btn" data-tab="groups">群組列表</button>
+        </div>
+
+        <!-- Lists Container -->
+        <div class="lists-container">
+            <!-- Friends List -->
+            <div class="list-section" id="friends-list">
+                <div class="list-group">
+                    <h4>線上好友</h4>
+                    <div class="friend-item">
+                        <div class="friend-avatar-container">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
+                            <span class="status-dot online"></span>
+                        </div>
+                        <span class="friend-name">Allan</span>
+                    </div>
+                    <div class="friend-item">
+                        <div class="friend-avatar-container">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
+                            <span class="status-dot online"></span>
+                        </div>
+                        <span class="friend-name">Jack</span>
+                    </div>
+                </div>
+
+                <div class="list-group">
+                    <h4>離線好友</h4>
+                    <div class="friend-item">
+                        <div class="friend-avatar-container">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
+                            <span class="status-dot offline"></span>
+                        </div>
+                        <span class="friend-name">Jason</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Groups List -->
+            <div class="list-section hidden" id="groups-list">
+                <div class="group-item">
+                    <img src="https://via.placeholder.com/32" alt="Group avatar">
+                    <div class="group-info">
+                        <span class="group-name">群組 1</span>
+                        <span class="group-members">4 位成員</span>
+                    </div>
+                </div>
+                <div class="group-item">
+                    <img src="https://via.placeholder.com/32" alt="Group avatar">
+                    <div class="group-info">
+                        <span class="group-name">群組 2</span>
+                        <span class="group-members">6 位成員</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="bottom-actions">
+            <!-- 通知按鈕和選單 -->
+            <div class="action-container">
+                <button class="action-btn"><i class="fas fa-bell"></i></button>
+                <div class="popup-menu notification-menu">
+                    <div class="menu-header">通知</div>
+                    <div class="menu-content">
+                        <div class="empty-state">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>目前沒有新通知</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 訊息按鈕和選單 -->
+            <div class="action-container">
+                <button class="action-btn"><i class="fas fa-comment"></i></button>
+                <div class="popup-menu message-menu">
+                    <div class="menu-header">訊息</div>
+                    <div class="menu-content">
+                        <div class="empty-state">
+                            <i class="fas fa-comments"></i>
+                            <p>沒有未讀訊息</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定按鈕和選單 -->
+            <div class="action-container">
+                <button class="action-btn"><i class="fas fa-cog"></i></button>
+                <div class="popup-menu settings-menu">
+                    <div class="menu-header">設定</div>
+                    <div class="menu-content">
+                        <a href="#" class="menu-item">
+                            <i class="fas fa-user"></i>
+                            <span>基本資料設定</span>
+                        </a>
+                        <a href="#" class="menu-item">
+                            <i class="fas fa-palette"></i>
+                            <span>主題設定</span>
+                        </a>
+                        <a href="#" class="menu-item">
+                            <i class="fas fa-bell"></i>
+                            <span>通知設定</span>
+                        </a>
+                        <div class="menu-divider"></div>
+                        <a href="#" class="menu-item text-red">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>登出</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="chat-area">
-        <div class="chat-header">
-            <h2>James LEE</h2>
-        </div>
-        <div class="messages-container" id="messagesList">
-            <!-- Messages will be inserted here -->
-        </div>
-        <div class="input-area">
-            <div class="input-container">
-                <input type="text" id="userInput" placeholder="您的名稱" />
-                <input type="text" id="messageInput" placeholder="輸入訊息..." />
-                <button id="sendButton">發送</button>
-            </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="welcome-message">
+            <i class="fas fa-comments"></i>
+            <p>選擇一個聊天或開始新的對話</p>
         </div>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Tab switching
+            $('.tab-btn').click(function() {
+                $('.tab-btn').removeClass('active');
+                $(this).addClass('active');
 
-<script>
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl("/chatHub")
-        .withAutomaticReconnect()
-        .build();
+                const tabId = $(this).data('tab');
+                $('.list-section').addClass('hidden');
+                $(`#${tabId}-list`).removeClass('hidden');
+            });
 
-    // 接收訊息的處理函數
-    connection.on("ReceiveMessage", (user, message) => {
-        const currentUser = document.getElementById("userInput").value;
-        const messageDiv = document.createElement("div");
-        messageDiv.className = "message " + (user === currentUser ? "sent" : "received");
+            // Friend item click handler
+            $('.friend-item, .group-item').click(function() {
+                $('.friend-item, .group-item').removeClass('selected');
+                $(this).addClass('selected');
+            });
 
-        const avatarDiv = document.createElement("div");
-        avatarDiv.className = "avatar";
+            // 點擊按鈕時切換選單
+            $('.action-btn').click(function(e) {
+                e.stopPropagation();
+                const $container = $(this).closest('.action-container');
+                const $menu = $container.find('.popup-menu');
 
-        const wrapperDiv = document.createElement("div");
-        wrapperDiv.className = "message-wrapper";
+                // 關閉其他選單
+                $('.popup-menu').not($menu).removeClass('active');
 
-        const senderDiv = document.createElement("div");
-        senderDiv.className = "message-sender";
-        senderDiv.textContent = user;
+                // 切換當前選單
+                $menu.toggleClass('active');
+            });
 
-        const contentDiv = document.createElement("div");
-        contentDiv.className = "message-content";
-        contentDiv.textContent = message;
-
-        wrapperDiv.appendChild(senderDiv);
-        wrapperDiv.appendChild(contentDiv);
-
-        if (user === currentUser) {
-            messageDiv.appendChild(wrapperDiv);
-            messageDiv.appendChild(avatarDiv);
-        } else {
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(wrapperDiv);
-        }
-
-        document.getElementById("messagesList").appendChild(messageDiv);
-        messageDiv.scrollIntoView({ behavior: "smooth" });
-    });
-
-    // 發送訊息的處理函數
-    document.getElementById("sendButton").addEventListener("click", async () => {
-        try {
-            if (connection.state === "Connected") {
-                const user = document.getElementById("userInput").value.trim();
-                const message = document.getElementById("messageInput").value.trim();
-
-                if (!user) {
-                    alert("請輸入您的名稱");
-                    return;
+            // 點擊其他地方時關閉所有選單
+            $(document).click(function(e) {
+                if (!$(e.target).closest('.popup-menu').length) {
+                    $('.popup-menu').removeClass('active');
                 }
+            });
 
-                if (message) {
-                    await connection.invoke("SendMessage", user, message);
-                    document.getElementById("messageInput").value = "";
-                }
-            } else {
-                console.log("未連接到伺服器");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    });
+            // 點擊選單內容時防止選單關閉
+            $('.popup-menu').click(function(e) {
+                e.stopPropagation();
+            });
 
-    // 按下Enter鍵發送訊息
-    document.getElementById("messageInput").addEventListener("keypress", async (e) => {
-        if (e.key === "Enter") {
-            document.getElementById("sendButton").click();
-        }
-    });
-
-    // 連接到伺服器
-    async function start() {
-        try {
-            await connection.start();
-            console.log("已連接到伺服器");
-        } catch (err) {
-            console.error(err);
-            setTimeout(start, 5000);
-        }
-    }
-
-    // 側邊欄切換功能
-    const toggleButton = document.querySelector('.toggle-sidebar');
-    const sidebar = document.querySelector('.sidebar');
-    const chatArea = document.querySelector('.chat-area');
-
-    toggleButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // 防止事件傳播到聊天區域
-        sidebar.classList.toggle('active');
-    });
-
-    // 點擊聊天區域時關閉側邊欄
-    chatArea.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-    });
-
-    // 在手機端自動隱藏側邊欄
-    function checkScreenSize() {
-        if (window.innerWidth <= 768) {
-            sidebar.classList.remove('active');
-        }
-    }
-
-    window.addEventListener('resize', checkScreenSize);
-    checkScreenSize(); // 初始檢查
-
-    start();
-</script>
+            $('.mobile-nav-toggle').click(function() {
+                $('.sidebar').toggleClass('mobile-hidden');
+            });
+        });
+    </script>
+}

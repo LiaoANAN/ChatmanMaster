@@ -26,3 +26,7 @@ body {
     height: 100vh; /* 設置視窗高度 */
     overflow: hidden; /* 防止整個頁面滾動 */
 }
+
+input:hover {
+    border: none;
+}

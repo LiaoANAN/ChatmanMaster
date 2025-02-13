@@ -2,5 +2,9 @@
   {
     "outputFile": "wwwroot/css/chat_room.css",
     "inputFile": "wwwroot/css/chat_room.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/index.css",
+    "inputFile": "wwwroot/css/index.scss"
   }
 ]
