@@ -219,4 +219,8 @@ body {
     background: white;
     z-index: 100;
   }
+  .chat-header h2 {
+    margin-left: 25px;
+    font-weight: 700;
+  }
 }

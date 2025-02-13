@@ -21,7 +21,7 @@
     </div>
     <div class="chat-area">
         <div class="chat-header">
-            <h2>聊天室</h2>
+            <h2>James LEE</h2>
         </div>
         <div class="messages-container" id="messagesList">
             <!-- Messages will be inserted here -->
@@ -124,13 +124,15 @@
     // 側邊欄切換功能
     const toggleButton = document.querySelector('.toggle-sidebar');
     const sidebar = document.querySelector('.sidebar');
+    const chatArea = document.querySelector('.chat-area');
 
-    toggleButton.addEventListener('click', () => {
+    toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止事件傳播到聊天區域
         sidebar.classList.toggle('active');
     });
 
     // 點擊聊天區域時關閉側邊欄
-    document.querySelector('.chat-area').addEventListener('click', () => {
+    chatArea.addEventListener('click', () => {
         sidebar.classList.remove('active');
     });
 
