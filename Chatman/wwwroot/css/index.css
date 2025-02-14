@@ -219,20 +219,20 @@
   color: #6b7280;
 }
 
-/* Bottom Actions */
+/* 底部按鈕容器 */
 .bottom-actions {
+  position: relative;
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-around;
+  background: white;
+  z-index: 999;
 }
 
 .action-btn {
-  padding: 0.5rem;
-  border: none;
-  background: none;
-  color: #6b7280;
-  cursor: pointer;
+  position: relative;
+  z-index: 998;
 }
 
 .action-btn:hover {
@@ -270,25 +270,23 @@
 }
 
 .popup-menu {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  width: 260px; /* 稍微加寬一點 */
+  position: fixed;
+  width: 260px;
   background: white;
-  border-radius: 16px; /* 更大的圓角 */
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); /* 更柔和的陰影 */
-  margin-bottom: 12px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(10px);
-  transition: all 0.3s ease; /* 更慢的轉場效果 */
-  border: 1px solid rgba(0, 0, 0, 0.05); /* 微妙的邊框 */
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 1000;
 }
 
 .popup-menu.active {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  pointer-events: auto; /* 顯示時接受點擊 */
 }
 
 /* Menu Header */
@@ -302,7 +300,8 @@
 
 /* Menu Content */
 .menu-content {
-  padding: 8px 0;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .menu-item {
@@ -364,17 +363,17 @@
 
 /* Action Button */
 .action-btn {
+  position: relative;
+  z-index: 998;
   padding: 8px;
-  border: none;
-  background: none;
-  color: #64748b; /* 更柔和的顏色 */
   cursor: pointer;
-  border-radius: 8px; /* 添加圓角 */
-  transition: all 0.2s ease;
+  background: none;
+  border: none;
+  color: #64748b;
+  transition: color 0.2s ease;
 }
 
 .action-btn:hover {
-  background-color: #f8fafc; /* 淺色懸停背景 */
   color: #334155;
 }
 
@@ -382,6 +381,12 @@
 .action-container .popup-menu.active + .action-btn {
   background-color: #f1f5f9;
   color: #334155;
+}
+
+/* 當選單靠近視窗右邊時的調整 */
+.action-container:last-child .popup-menu {
+  right: 0;
+  left: auto;
 }
 
 .mobile-nav-toggle {
@@ -417,12 +422,13 @@
   }
   /* 彈出選單調整 */
   .popup-menu {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 70px;
     width: 90%;
     max-width: 360px;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    bottom: 70px !important;
+    top: auto !important;
   }
   .popup-menu.active {
     transform: translateX(-50%) translateY(0);
@@ -470,6 +476,17 @@
   }
   .mobile-nav-toggle {
     display: block;
+  }
+}
+/* 當選單靠近視窗底部時的調整 */
+@media (max-height: 600px) {
+  .popup-menu {
+    bottom: auto;
+    top: 0;
+    transform: translateY(-10px);
+  }
+  .popup-menu.active {
+    transform: translateY(0);
   }
 }
 /* 處理超小螢幕 */

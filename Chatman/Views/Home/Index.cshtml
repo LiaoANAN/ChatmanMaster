@@ -174,7 +174,7 @@
             });
 
             // 點擊按鈕時切換選單
-            $('.action-btn').click(function(e) {
+            $('.action-btn').click(function (e) {
                 e.stopPropagation();
                 const $container = $(this).closest('.action-container');
                 const $menu = $container.find('.popup-menu');
@@ -182,19 +182,74 @@
                 // 關閉其他選單
                 $('.popup-menu').not($menu).removeClass('active');
 
-                // 切換當前選單
+                // 檢查是否為手機版
+                const isMobile = window.innerWidth <= 768;
+
+                if (!$menu.hasClass('active')) {
+                    if (isMobile) {
+                        // 手機版的處理邏輯
+                        $menu.css({
+                            'position': 'fixed',
+                            'left': '50%',
+                            'bottom': '70px',
+                            'transform': 'translateX(-50%)',
+                            'width': '90%',
+                            'max-width': '360px'
+                        });
+                    } else {
+                        // 電腦版的處理邏輯
+                        const buttonRect = this.getBoundingClientRect();
+                        const menuWidth = $menu.outerWidth();
+                        const windowWidth = window.innerWidth;
+
+                        // 重置樣式
+                        $menu.css({
+                            'position': 'fixed',
+                            'width': '260px',
+                            'transform': 'none'
+                        });
+
+                        // 水平位置調整
+                        if (buttonRect.right + menuWidth > windowWidth) {
+                            $menu.css({
+                                'right': '20px',
+                                'left': 'auto'
+                            });
+                        } else {
+                            $menu.css({
+                                'left': buttonRect.left + 'px',
+                                'right': 'auto'
+                            });
+                        }
+
+                        // 垂直位置調整
+                        if (buttonRect.top > 300) { // 如果按鈕位置較低
+                            $menu.css({
+                                'bottom': '60px',
+                                'top': 'auto'
+                            });
+                        } else {
+                            $menu.css({
+                                'top': buttonRect.bottom + 'px',
+                                'bottom': 'auto'
+                            });
+                        }
+                    }
+                }
+
+                // 切換選單
                 $menu.toggleClass('active');
             });
 
-            // 點擊其他地方時關閉所有選單
-            $(document).click(function(e) {
-                if (!$(e.target).closest('.popup-menu').length) {
+            // 點擊外部關閉選單
+            $(document).click(function (e) {
+                if (!$(e.target).closest('.popup-menu, .action-btn').length) {
                     $('.popup-menu').removeClass('active');
                 }
             });
 
             // 點擊選單內容時防止選單關閉
-            $('.popup-menu').click(function(e) {
+            $('.popup-menu').click(function (e) {
                 e.stopPropagation();
             });
 
