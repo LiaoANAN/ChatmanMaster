@@ -3,6 +3,7 @@
 }
 
 <link rel="stylesheet" href="~/css/index.min.css" />
+<link rel="stylesheet" href="~/css/chat_room.min.css" />
 
 <style>
 </style>
@@ -147,9 +148,55 @@
 
     <!-- Main Content Area -->
     <div class="main-content">
-        <div class="welcome-message">
+        <!-- 默認歡迎訊息 -->
+        <div class="welcome-message" id="welcome-message">
             <i class="fas fa-comments"></i>
             <p>選擇一個聊天或開始新的對話</p>
+        </div>
+
+        <!-- 聊天室區域 -->
+        <div class="chat-room hidden" id="chat-room">
+            <!-- 聊天室標題 -->
+            <div class="chat-header">
+                <div class="chat-user-info">
+                    <img src="" alt="User avatar" class="chat-user-avatar">
+                    <div class="chat-user-details">
+                        <h3 class="chat-user-name"></h3>
+                        <span class="chat-user-status"></span>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button class="chat-action-btn">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="chat-action-btn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="chat-action-btn">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 聊天記錄區域 -->
+            <div class="messages-container">
+                <div class="messages-list">
+                    <!-- 消息會動態插入這裡 -->
+                </div>
+            </div>
+
+            <!-- 輸入區域 -->
+            <div class="input-area">
+                <div class="input-container">
+                    <button class="input-action-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <input type="text" id="messageInput" placeholder="輸入訊息...">
+                    <button class="input-action-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -256,6 +303,53 @@
             $('.mobile-nav-toggle').click(function() {
                 $('.sidebar').toggleClass('mobile-hidden');
             });
+
+            $('.friend-item').click(function () {
+                const userName = $(this).find('.friend-name').text();
+                const userAvatar = $(this).find('img').attr('src');
+                const isOnline = $(this).find('.status-dot').hasClass('online');
+
+                // 更新聊天室信息
+                $('.chat-user-name').text(userName);
+                $('.chat-user-avatar').attr('src', userAvatar);
+                $('.chat-user-status').text(isOnline ? 'Online' : 'Offline');
+
+                // 隱藏歡迎訊息，顯示聊天室
+                $('#welcome-message').addClass('hidden');
+                $('#chat-room').removeClass('hidden');
+
+                // 在移動設備上，可能需要隱藏側邊欄
+                if (window.innerWidth <= 768) {
+                    $('.sidebar').removeClass('active');
+                }
+            });
+        });
+
+        // 發送訊息
+        function sendMessage() {
+            const message = $('#messageInput').val().trim();
+            if (message) {
+                const messageHtml = `
+                        <div class="message sent">
+                            <div class="message-content">${message}</div>
+                        </div>
+                    `;
+                $('.messages-list').append(messageHtml);
+                $('#messageInput').val('');
+
+                // 滾動到底部
+                $('.messages-container').scrollTop($('.messages-container')[0].scrollHeight);
+            }
+        }
+
+        // 發送按鈕點擊事件
+        $('.input-action-btn i.fa-paper-plane').parent().click(sendMessage);
+
+        // Enter 鍵發送訊息
+        $('#messageInput').keypress(function (e) {
+            if (e.which == 13) {
+                sendMessage();
+            }
         });
     </script>
 }
