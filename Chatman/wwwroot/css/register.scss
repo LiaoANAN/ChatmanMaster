@@ -12,8 +12,11 @@ $bg-color: #f9fafb;
     padding: 0.75rem 1rem;
     border: 1px solid $border-color;
     border-radius: 0.75rem;
-    font-size: 1rem;
+    font-size: 16px; // 最小字體大小設為16px
     line-height: 1.5;
+    -webkit-appearance: none; // 移除iOS默認樣式
+    -moz-appearance: none;
+    appearance: none;
 
     &:focus {
         outline: none;

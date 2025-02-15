@@ -47,6 +47,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// 明確設定 URLs
+builder.WebHost.UseUrls("https://59.126.23.88:7233", "http://localhost:5012", "https://localhost:7233");
+
 // 添加授權服務
 builder.Services.AddAuthorization();
 
