@@ -4,8 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Chatman.Controllers
 {
-    [Route("api/[controller]")]
-    public class UserController : Controller
+    public class UserController : WebController
     {
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
@@ -18,6 +17,11 @@ namespace Chatman.Controllers
 
         #region //View
         public IActionResult Login()
+        {
+            return View();
+        }
+
+        public IActionResult Register()
         {
             return View();
         }
@@ -36,7 +40,7 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Login
-        [HttpPost("login")]
+        [HttpPost]
         public async Task<IActionResult> UserLogin([FromBody] LoginRequest request)
         {
             try
@@ -54,7 +58,29 @@ namespace Chatman.Controllers
                 _logger.LogError(ex, "Login failed");
                 return StatusCode(500, new { message = "內部伺服器錯誤" });
             }
-            #endregion
         }
+        #endregion
+
+        #region //Register
+        [HttpPost]
+        public async Task<IActionResult> UserRegister([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                var response = await _userService.RegisterAsync(request);
+                if (response.Success)
+                {
+                    return Ok(response);
+                }
+
+                return BadRequest(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Register failed");
+                return StatusCode(500, new { message = "內部伺服器錯誤" });
+            }
+        }
+        #endregion
     }
 }

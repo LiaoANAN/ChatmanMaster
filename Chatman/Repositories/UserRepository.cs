@@ -4,6 +4,7 @@ using Chatman.Models;
 using Dapper;
 using System.Transactions;
 using Microsoft.Data.SqlClient;
+using Chatman.Models.DTOs;
 
 namespace Chatman.Repositories
 {
@@ -11,6 +12,7 @@ namespace Chatman.Repositories
     {
         private readonly IDatabaseConnection _db;
         private readonly ILogger<UserRepository> _logger;
+        private string sql = "";
 
         public UserRepository(IDatabaseConnection db, ILogger<UserRepository> logger)
         {
@@ -23,12 +25,11 @@ namespace Chatman.Repositories
             try
             {
                 using var connection = _db.CreateConnection();
-                const string sql = @"
-                    SELECT UserId, UserCode, Email, Password, Gender, 
-                           Birthday, Status, CreateDate, UpdateDate, 
-                           CreateUserId, UpdateUserId
-                    FROM BAS.UserInfo 
-                    WHERE Email = @Email";
+                sql = @"SELECT UserId, UserName, Email, Password, Gender, 
+                                Birthday, Status, CreateDate, UpdateDate, 
+                                CreateUserId, UpdateUserId
+                        FROM BAS.UserInfo 
+                        WHERE Email = @Email";
 
                 var user = await connection.QueryFirstOrDefaultAsync<UserInfo>(
                     sql, new { Email = email });
@@ -98,7 +99,7 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<bool> CreateUserAsync(UserInfo user)
+        public async Task<int> RegisterAsync(UserInfo user)
         {
             try
             {
@@ -108,26 +109,43 @@ namespace Chatman.Repositories
                 using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
                 {
                     const string sql = @"
-                    INSERT INTO BAS.UserInfo (
-                        UserCode, Email, Password, Gender, Birthday,
-                        Status, CreateDate, CreateUserId
-                    ) VALUES (
-                        @UserCode, @Email, @Password, @Gender, @Birthday,
-                        @Status, @CreateDate, @CreateUserId
-                    )";
+                                        INSERT INTO BAS.UserInfo (
+                                            UserName, Email, Password, Gender, Birthday,
+                                            Status, CreateDate, CreateUserId
+                                        ) 
+                                        OUTPUT INSERTED.UserId 
+                                        VALUES (
+                                            @UserName, @Email, @Password, @Gender, @Birthday,
+                                            @Status, @CreateDate, @CreateUserId
+                                        )";
 
-                    user.CreateDate = DateTime.Now;
-                    user.Status = "A"; // Active
-                    var rowsAffected = await connection.ExecuteAsync(sql, user);
+                    int userId = await connection.ExecuteScalarAsync<int>(sql, user);
 
                     transactionScope.Complete();
 
-                    return rowsAffected > 0;
+                    return userId;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating user: {Email}", user.Email);
+                throw;
+            }
+        }
+
+        public async Task<bool> IsEmailExistsAsync(string email)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT TOP 1 1 FROM BAS.UserInfo WHERE Email = @Email";
+
+                var result = await connection.QueryAsync(sql, new { Email = email });
+                return result.Count() > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
                 throw;
             }
         }

@@ -136,7 +136,7 @@
                             <span>通知設定</span>
                         </a>
                         <div class="menu-divider"></div>
-                        <a href="#" class="menu-item text-red">
+                        <a href="javascript: logout();" class="menu-item text-red">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>登出</span>
                         </a>
@@ -351,5 +351,17 @@
                 sendMessage();
             }
         });
+
+        function logout() {
+            // 清除 cookie
+            document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            // 清除存儲的用戶信息
+            localStorage.removeItem('userInfo');
+            sessionStorage.removeItem('userInfo');
+
+            // 重定向到登入頁
+            window.location.href = '/User/Login';
+        }
     </script>
 }

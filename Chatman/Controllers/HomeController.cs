@@ -1,9 +1,11 @@
+using Chatman.Filters;
 using Chatman.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
 namespace Chatman.Controllers
 {
+    [Authentication]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;

@@ -1,0 +1,176 @@
+﻿.register-page {
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: #f9fafb;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 768px) {
+  .register-page {
+    padding: 2rem 1rem;
+  }
+}
+.register-page .register-container {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  overflow: auto;
+  max-height: 100vh;
+}
+.register-page .register-content {
+  padding: 1.5rem;
+}
+@media (min-width: 768px) {
+  .register-page .register-content {
+    padding: 2rem;
+  }
+}
+.register-page .logo-section {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.register-page .logo-section img {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 0.5rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+.register-page .logo-section h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+.register-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.register-page .input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.register-page .input-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+}
+.register-page .gender-group {
+  display: flex;
+  gap: 0.75rem;
+}
+.register-page .gender-group .gender-option {
+  flex: 1;
+}
+.register-page .gender-group .gender-option input[type=radio] {
+  display: none;
+}
+.register-page .gender-group .gender-option input[type=radio]:checked + .gender-label {
+  background-color: rgba(34, 197, 94, 0.05);
+  border-color: #22c55e;
+}
+.register-page .gender-group .gender-option .gender-label {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #4b5563;
+}
+.register-page .gender-group .gender-option .gender-label:hover {
+  background-color: #f9fafb;
+}
+.register-page .submit-button {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background-color: #22c55e;
+  color: white;
+  font-weight: 500;
+}
+.register-page .submit-button:hover {
+  background-color: #16a34a;
+}
+.register-page .divider {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+}
+.register-page .divider::before, .register-page .divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e5e7eb;
+}
+.register-page .divider span {
+  padding: 0 0.75rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+}
+.register-page .social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.register-page .social-buttons .social-button {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #4b5563;
+}
+.register-page .social-buttons .social-button:hover {
+  background-color: #f9fafb;
+}
+.register-page .login-link {
+  margin-top: 1rem;
+  text-align: center;
+  color: #4b5563;
+}
+.register-page .login-link a {
+  color: #22c55e;
+  font-weight: 500;
+  text-decoration: none;
+}
+.register-page .login-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    height: -webkit-fill-available;
+  }
+  .register-page {
+    min-height: -webkit-fill-available;
+  }
+}
+.password-mismatch {
+  border-color: #ef4444 !important;
+}
+.password-mismatch:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}

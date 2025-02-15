@@ -4,11 +4,17 @@ using Chatman.Data;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
+using Chatman.Services;
+using Chatman.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // 全局添加驗證過濾器
+    options.Filters.Add<AuthenticationAttribute>();
+});
 
 builder.Services.AddSignalR();
 
@@ -17,6 +23,9 @@ builder.Services.AddSingleton<IDatabaseConnection, DatabaseConnection>();
 
 // Add repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+// 註冊 UserService
+builder.Services.AddScoped<IUserService, UserService>();
 
 // 添加認證服務
 builder.Services.AddAuthentication(options =>

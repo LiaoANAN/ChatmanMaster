@@ -21,7 +21,7 @@
             <!-- 登入表單 -->
             <form id="loginForm" class="space-y-4">
                 <div>
-                    <input type="text" id="txtAccount"
+                    <input type="text" id="txtEmail"
                            class="w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                            placeholder="電子郵件" required>
                 </div>
@@ -32,7 +32,7 @@
                 </div>
                 <div class="flex items-center justify-between text-xs sm:text-sm py-2">
                     <label class="flex items-center">
-                        <input type="checkbox" class="mr-2 h-3 w-3 sm:h-4 sm:w-4">
+                        <input type="checkbox" id="cbxRememberMe" class="mr-2 h-3 w-3 sm:h-4 sm:w-4">
                         <span class="text-gray-600">記住我</span>
                     </label>
                     <a href="#" class="text-green-600">忘記密碼？</a>
@@ -66,8 +66,51 @@
             <!-- 註冊連結 -->
             <p class="mt-6 sm:mt-8 text-center text-sm sm:text-base text-gray-600">
                 還沒有帳號？
-                <a href="#" class="text-green-600 font-medium">立即註冊</a>
+                <a href="/User/Register" class="text-green-600 font-medium">立即註冊</a>
             </p>
         </div>
     </main>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#loginForm').on('submit', function (e) {
+                e.preventDefault();
+
+                const loginData = {
+                    email: $('#txtEmail').val(),
+                    password: $('#txtPassword').val(),
+                    rememberMe: $("#cbxRememberMe").prop("checked")
+                };
+
+                $.ajax({
+                    url: '/User/UserLogin',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(loginData),
+                    success: function (response) {
+                        if (response.success) {
+                            document.cookie = `auth_token=${response.token}; path=/`;
+
+                            // 如果選擇"記住我"，使用 localStorage
+                            // 否則使用 sessionStorage
+                            if (loginData.rememberMe) {
+                                localStorage.setItem('userInfo', JSON.stringify(response.userInfo));
+                            } else {
+                                sessionStorage.setItem('userInfo', JSON.stringify(response.userInfo));
+                            }
+
+                            window.location.href = '/Home/Index';
+                        } else {
+                            alert(response.message || '登入失敗');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('登入失敗：' + (xhr.responseJSON?.message || '發生錯誤'));
+                    }
+                });
+            });
+        });
+    </script>
+}

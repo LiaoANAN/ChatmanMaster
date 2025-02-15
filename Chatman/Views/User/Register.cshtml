@@ -1,0 +1,161 @@
+﻿@{
+    ViewData["Title"] = "Register";
+}
+
+<link rel="stylesheet" href="~/css/register.min.css" />
+
+<div class="register-page">
+    <div class="register-container">
+        <div class="register-content">
+            <!-- Logo 區域 -->
+            <div class="logo-section">
+                <img src="https://engineering.fb.com/wp-content/uploads/2009/02/chat.jpg"
+                     alt="Logo">
+                <h1>CHATMAN</h1>
+            </div>
+
+            <!-- 註冊表單 -->
+            <form id="registerForm">
+                <div class="form-group">
+                    <!-- 用戶名稱 -->
+                    <input type="text"
+                           id="txtUserName"
+                           name="username"
+                           class="input-field"
+                           placeholder="用戶暱稱"
+                           required>
+
+                    <!-- 電子郵件 -->
+                    <input type="email"
+                           id="txtEmail"
+                           name="email"
+                           class="input-field"
+                           placeholder="電子郵件"
+                           required>
+
+                    <!-- 密碼 -->
+                    <input type="password"
+                           id="txtPassword"
+                           name="password"
+                           class="input-field"
+                           placeholder="密碼"
+                           required>
+
+                    <!-- 確認密碼 -->
+                    <input type="password"
+                           id="txtConfirmPassword"
+                           name="confirmPassword"
+                           class="input-field"
+                           placeholder="確認密碼"
+                           required>
+
+                    <!-- 生日選擇 -->
+                    <input type="date"
+                           id="txtBirthday"
+                           name="birthday"
+                           class="input-field"
+                           required>
+
+                    <!-- 性別選擇 -->
+                    <div class="gender-group">
+                        <div class="gender-option">
+                            <input type="radio"
+                                   id="male"
+                                   name="gender"
+                                   value="M">
+                            <label for="male" class="gender-label">男性</label>
+                        </div>
+                        <div class="gender-option">
+                            <input type="radio"
+                                   id="female"
+                                   name="gender"
+                                   value="F">
+                            <label for="female" class="gender-label">女性</label>
+                        </div>
+                    </div>
+
+                    <!-- 註冊按鈕 -->
+                    <button type="submit" class="submit-button">
+                        註冊
+                    </button>
+                </div>
+
+                <!-- 分隔線 -->
+                <div class="divider">
+                    <span>或</span>
+                </div>
+
+                <!-- 社群登入按鈕 -->
+                <div class="social-buttons">
+                    <button type="button" class="social-button">
+                        使用 Google 帳號註冊
+                    </button>
+                    <button type="button" class="social-button">
+                        使用 Facebook 帳號註冊
+                    </button>
+                    <button type="button" class="social-button">
+                        使用 Apple 帳號註冊
+                    </button>
+                </div>
+
+                <!-- 登入連結 -->
+                <div class="login-link">
+                    已經有帳號？
+                    <a href="/User/Login">立即登入</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#registerForm').on('submit', function (e) {
+                e.preventDefault();
+
+                if ($('#txtPassword').val() !== $('#txtConfirmPassword').val()) {
+                    alert('密碼與確認密碼不相符');
+                    return;
+                }
+
+                const registerData = {
+                    username: $('#txtUserName').val(),
+                    email: $('#txtEmail').val(),
+                    password: $('#txtPassword').val(),
+                    gender: $('input[name="gender"]:checked').val(),
+                    birthday: $('#txtBirthday').val()
+                };
+
+                $.ajax({
+                    url: '/User/UserRegister',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(registerData),
+                    success: function (response) {
+                        if (response.success) {
+                            alert('註冊成功！');
+                            window.location.href = '/User/Login';
+                        } else {
+                            alert(response.message || '註冊失敗');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('註冊失敗：' + (xhr.responseJSON?.message || '發生錯誤'));
+                    }
+                });
+            });
+
+            $('#txtConfirmPassword').on('input', function () {
+                const password = $('#txtPassword').val();
+                const confirmPassword = $(this).val();
+
+                if (confirmPassword && password !== confirmPassword) {
+                    $(this).addClass('password-mismatch');
+                } else {
+                    $(this).removeClass('password-mismatch');
+                }
+            });
+        });
+    </script>
+}

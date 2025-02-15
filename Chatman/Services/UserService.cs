@@ -6,6 +6,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Security.Cryptography;
+using Microsoft.Data.SqlClient;
+using Azure.Core;
 
 namespace Chatman.Services
 {
@@ -26,6 +28,24 @@ namespace Chatman.Services
         {
             try
             {
+                if (request.Email == null)
+                {
+                    return new LoginResponse
+                    {
+                        Success = false,
+                        Message = "信箱不能為空"
+                    };
+                }
+
+                if (request.Password == null)
+                {
+                    return new LoginResponse
+                    {
+                        Success = false,
+                        Message = "密碼不能為空"
+                    };
+                }
+
                 var user = await _userRepository.GetByEmailAsync(request.Email);
 
                 if (user == null)
@@ -46,7 +66,7 @@ namespace Chatman.Services
                     };
                 }
 
-                if (!await ValidatePasswordAsync(request.Password, user.Password))
+                if (!ValidatePasswordAsync(request.Password, user.Password))
                 {
                     return new LoginResponse
                     {
@@ -92,7 +112,7 @@ namespace Chatman.Services
             {
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Name, user.UserCode)
+                new Claim(ClaimTypes.Name, user.UserId.ToString())
             };
 
             var token = new JwtSecurityToken(
@@ -115,23 +135,59 @@ namespace Chatman.Services
             }
         }
 
-        public async Task<bool> ValidatePasswordAsync(string hashedPassword, string inputPassword)
+        public bool ValidatePasswordAsync(string inputPassword, string hashedPassword)
+        {
+            var hashedInput = HashPassword(inputPassword);
+            return hashedPassword == hashedInput;
+        }
+
+        public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
         {
             try
             {
-                // 在實際應用中，這裡應該使用加密後的密碼比對
-                using (var sha256 = SHA256.Create())
+                //確認信箱是否重複
+                if (await IsEmailExistsAsync(request.Email))
                 {
-                    var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
-                    var computedHash = Convert.ToBase64String(hashedBytes);
-                    return hashedPassword == computedHash;
+                    return RegisterResponse.ErrorResponse("此電子郵件已被註冊");
                 }
+
+                UserInfo user = new UserInfo
+                {
+                    UserName = request.Username,
+                    Email = request.Email,
+                    Password = HashPassword(request.Password),
+                    Gender = request.Gender,
+                    Birthday = request.Birthday,
+                    Status = "A",
+                    CreateDate = DateTime.Now,
+                    CreateUserId = 0
+                };
+
+                int userId = await _userRepository.RegisterAsync(user);
+
+                if (userId > 0)
+                {
+                    return new RegisterResponse()
+                    {
+                        Success = true,
+                        Message = "註冊成功",
+                        UserId = userId
+                    };
+                }
+
+                return RegisterResponse.ErrorResponse("註冊失敗!");
+
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Password validation failed");
-                throw;
+                _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
+                return RegisterResponse.ErrorResponse(ex.Message);
             }
+        }
+
+        public async Task<bool> IsEmailExistsAsync(string email)
+        {
+            return await _userRepository.IsEmailExistsAsync(email);
         }
     }
 }

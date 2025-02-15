@@ -1,8 +1,8 @@
 CREATE TABLE BAS.UserInfo( /*用戶資料*/
  UserId						int					identity,
- UserCode					nvarchar(MAX)		NOT NULL,						--使用者辨別碼
+ UserName					nvarchar(10)		NOT NULL,						--用戶暱稱
  Email						nvarchar(45)		NOT NULL,						--信箱
- Password					nvarchar(45)		NOT NULL,						--密碼
+ Password					nvarchar(MAX)		NOT NULL,						--密碼
  Gender						nvarchar(1)				NULL,						--性別 M/F
  Birthday					datetime				NULL,						--生日(西元格式: 1911-01-01)
  [Status]					nvarchar(1)			NOT NULL,						--狀態碼
