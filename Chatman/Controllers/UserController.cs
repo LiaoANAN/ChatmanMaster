@@ -1,6 +1,9 @@
 ﻿using Chatman.Interfaces;
 using Chatman.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
+using Chatman.Helpers;
+using Chatman.Models;
+using Newtonsoft.Json.Linq;
 
 namespace Chatman.Controllers
 {
@@ -24,6 +27,32 @@ namespace Chatman.Controllers
         public IActionResult Register()
         {
             return View();
+        }
+        #endregion
+
+        #region //Get
+        [HttpGet]
+        public async Task<IActionResult> GetFriendsList()
+        {
+            try
+            {
+                var userInfo = WebHelper.GetCurrentUser(this.HttpContext);
+                var friends = await _userService.GetFriendsByUserIdAsync(userInfo.UserId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = friends
+                });
+            }
+            catch (Exception ex) 
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
         #endregion
 

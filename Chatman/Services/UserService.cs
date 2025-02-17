@@ -8,6 +8,7 @@ using System.Text;
 using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
 using Azure.Core;
+using Chatman.Helpers;
 
 namespace Chatman.Services
 {
@@ -110,9 +111,12 @@ namespace Chatman.Services
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Name, user.UserId.ToString())
+                new Claim("userId", user.UserId.ToString()),
+                new Claim("userName", user.UserName),
+                new Claim("email", user.Email),
+                new Claim("status", user.Status),
+                // 如果需要，可以添加更多 claims
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
             var token = new JwtSecurityToken(
@@ -126,18 +130,9 @@ namespace Chatman.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(hashedBytes);
-            }
-        }
-
         public bool ValidatePasswordAsync(string inputPassword, string hashedPassword)
         {
-            var hashedInput = HashPassword(inputPassword);
+            var hashedInput = WebHelper.HashPassword(inputPassword);
             return hashedPassword == hashedInput;
         }
 
@@ -155,7 +150,7 @@ namespace Chatman.Services
                 {
                     UserName = request.Username,
                     Email = request.Email,
-                    Password = HashPassword(request.Password),
+                    Password = WebHelper.HashPassword(request.Password),
                     Gender = request.Gender,
                     Birthday = request.Birthday,
                     Status = "A",
@@ -188,6 +183,11 @@ namespace Chatman.Services
         public async Task<bool> IsEmailExistsAsync(string email)
         {
             return await _userRepository.IsEmailExistsAsync(email);
+        }
+
+        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
+        {
+            return await _userRepository.GetFriendsByUserIdAsync(userId);
         }
     }
 }

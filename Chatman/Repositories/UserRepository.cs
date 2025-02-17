@@ -26,7 +26,7 @@ namespace Chatman.Repositories
             {
                 using var connection = _db.CreateConnection();
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
-                                Birthday, Status, CreateDate, UpdateDate, 
+                                Birthday, Status, Bio, CreateDate, UpdateDate, 
                                 CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email = @Email";
@@ -146,6 +146,29 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT a.FriendRelationId, a.UserId, a.FriendId, a.Status
+                        , a.CreateDate, a.UpdateDate, a.CreateUserId, a.UpdateUserId
+                        , b.UserName, b.Bio
+                        FROM BAS.FriendRelation a 
+                        INNER JOIN BAS.UserInfo b ON a.FriendId = b.UserId
+                        WHERE a.UserId = @UserId";
+
+                var friends = (await connection.QueryAsync<FriendRelation>(sql, new { UserId = userId })).ToList();
+                
+                return friends;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
                 throw;
             }
         }

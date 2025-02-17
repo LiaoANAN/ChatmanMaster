@@ -236,6 +236,24 @@
     }
 }
 
+/* 在 chat_room.scss 中添加 */
+.friend-item {
+    transition: all 0.3s ease;
+}
+
+.status-dot {
+    transition: background-color 0.3s ease;
+}
+
+/* 狀態變化的動畫 */
+.status-dot.online {
+    background-color: #10b981;
+}
+
+.status-dot.offline {
+    background-color: #9ca3af;
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
     .chat-header {

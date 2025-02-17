@@ -5,6 +5,7 @@ CREATE TABLE BAS.UserInfo( /*用戶資料*/
  Password					nvarchar(MAX)		NOT NULL,						--密碼
  Gender						nvarchar(1)				NULL,						--性別 M/F
  Birthday					datetime				NULL,						--生日(西元格式: 1911-01-01)
+ Bio                        nvarchar(100)           NULL,                       --個人簡介
  [Status]					nvarchar(1)			NOT NULL,						--狀態碼
  CreateDate					datetime			NOT NULL	DEFAULT GETDATE(),	--新增日期
  UpdateDate					datetime				NULL,						--修改日期

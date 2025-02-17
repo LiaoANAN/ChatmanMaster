@@ -209,21 +209,20 @@
             .withAutomaticReconnect()
             .build();
 
+        // 在線用戶ID
+        let onlineUserIds = [];
+
         $(document).ready(function() {
             // 初始化
             initializeChat();
 
-            // 載入用戶資訊
-            loadUserProfile();
-
-            // 載入好友列表
-            loadFriendsList();
-
             // 啟動 SignalR 連接
             startSignalRConnection();
+
+            // 載入用戶資訊
+            loadUserProfile();
         });
 
-        // 初始化聊天相關功能
         function initializeChat() {
             // Tab switching
             $('.tab-btn').click(function() {
@@ -241,12 +240,91 @@
                 $(this).addClass('selected');
                 openChatRoom($(this));
             });
+
+            // 點擊按鈕時切換選單
+            $('.action-btn').click(function (e) {
+                e.stopPropagation();
+                const $container = $(this).closest('.action-container');
+                const $menu = $container.find('.popup-menu');
+
+                // 關閉其他選單
+                $('.popup-menu').not($menu).removeClass('active');
+
+                // 檢查是否為手機版
+                const isMobile = window.innerWidth <= 768;
+
+                if (!$menu.hasClass('active')) {
+                    if (isMobile) {
+                        // 手機版的處理邏輯
+                        $menu.css({
+                            'position': 'fixed',
+                            'left': '50%',
+                            'bottom': '70px',
+                            'transform': 'translateX(-50%)',
+                            'width': '90%',
+                            'max-width': '360px'
+                        });
+                    } else {
+                        // 電腦版的處理邏輯
+                        const buttonRect = this.getBoundingClientRect();
+                        const menuWidth = $menu.outerWidth();
+                        const windowWidth = window.innerWidth;
+
+                        // 重置樣式
+                        $menu.css({
+                            'position': 'fixed',
+                            'width': '260px',
+                            'transform': 'none'
+                        });
+
+                        // 水平位置調整
+                        if (buttonRect.right + menuWidth > windowWidth) {
+                            $menu.css({
+                                'right': '20px',
+                                'left': 'auto'
+                            });
+                        } else {
+                            $menu.css({
+                                'left': buttonRect.left + 'px',
+                                'right': 'auto'
+                            });
+                        }
+
+                        // 垂直位置調整
+                        if (buttonRect.top > 300) { // 如果按鈕位置較低
+                            $menu.css({
+                                'bottom': '60px',
+                                'top': 'auto'
+                            });
+                        } else {
+                            $menu.css({
+                                'top': buttonRect.bottom + 'px',
+                                'bottom': 'auto'
+                            });
+                        }
+                    }
+                }
+
+                // 切換選單
+                $menu.toggleClass('active');
+            });
+
+            // 點擊外部關閉選單
+            $(document).click(function (e) {
+                if (!$(e.target).closest('.popup-menu, .action-btn').length) {
+                    $('.popup-menu').removeClass('active');
+                }
+            });
+
+            // 點擊選單內容時防止選單關閉
+            $('.popup-menu').click(function (e) {
+                e.stopPropagation();
+            });
         }
 
         // 載入用戶個人資料
         function loadUserProfile() {
             const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
-            console.log(userInfo);
             if (userInfo) {
                 $('.user-profile .user-details h3').text(userInfo.userName);
                 // TODO: 設置用戶頭像
@@ -254,34 +332,43 @@
         }
 
         // 載入好友列表
-        function loadFriendsList() {
-            $.ajax({
-                url: '/Friend/GetFriendsList',
-                type: 'GET',
-                success: function(response) {
-                    if (response.success) {
-                        renderFriendsList(response.data);
-                    } else {
-                        console.error('載入好友列表失敗：', response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('API錯誤：', error);
+        async function loadFriendsList() {
+            try {
+                // 首先從 SignalR hub 獲取在線用戶列表
+                onlineUserIds = await connection.invoke("GetOnlineUserIds");
+
+                const response = await $.ajax({
+                    url: '/User/GetFriendsList',
+                    type: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json'
+                });
+
+                if (response.success){
+                    successAlert('獲取好友成功', 'test', 1500);
+                    renderFriendsList(response.data);
                 }
-            });
+                else{
+                    errorAlert('註冊失敗', response.message || '發生錯誤', 1500);
+                }
+
+            } catch(error) {
+                console.error('API錯誤：', error);
+            }
         }
 
         // 渲染好友列表
         function renderFriendsList(friends) {
-            const onlineFriends = friends.filter(f => f.isOnline);
-            const offlineFriends = friends.filter(f => !f.isOnline);
+            // 根據 onlineUserIds 判斷每個好友的在線狀態
+            const onlineFriends = friends.filter(f => onlineUserIds.includes(f.friendId));
+            const offlineFriends = friends.filter(f => !onlineUserIds.includes(f.friendId));
 
             let onlineHtml = '';
             let offlineHtml = '';
 
             onlineFriends.forEach(friend => {
                 onlineHtml += `
-                    <div class="friend-item" data-id="${friend.userId}">
+                    <div class="friend-item" data-id="${friend.friendId}">
                         <div class="friend-avatar-container">
                             <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
                             <span class="status-dot online"></span>
@@ -293,7 +380,7 @@
 
             offlineFriends.forEach(friend => {
                 offlineHtml += `
-                    <div class="friend-item" data-id="${friend.userId}">
+                    <div class="friend-item" data-id="${friend.friendId}">
                         <div class="friend-avatar-container">
                             <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
                             <span class="status-dot offline"></span>
@@ -303,15 +390,20 @@
                 `;
             });
 
-            $('#friends-list .list-group:eq(0)').html(`
-                <h4>線上好友</h4>
-                ${onlineHtml}
-            `);
+            // 使用淡入效果更新列表
+            $('#friends-list .list-group:eq(0)').fadeOut(200, function() {
+                $(this).html(`
+                    <h4>線上好友 (${onlineFriends.length})</h4>
+                    ${onlineHtml}
+                `).fadeIn(200);
+            });
 
-            $('#friends-list .list-group:eq(1)').html(`
-                <h4>離線好友</h4>
-                ${offlineHtml}
-            `);
+            $('#friends-list .list-group:eq(1)').fadeOut(200, function() {
+                $(this).html(`
+                    <h4>離線好友 (${offlineFriends.length})</h4>
+                    ${offlineHtml}
+                `).fadeIn(200);
+            });
         }
 
         // 開啟聊天室
@@ -352,11 +444,17 @@
 
                 // 連接後註冊當前用戶
                 const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
-                if (userInfo) {
-                    connection.invoke("RegisterUser", userInfo.userId);
+                if (userInfo && userInfo.userId) {
+                    try {
+                        await connection.invoke("RegisterUser", parseInt(userInfo.userId));
+                        // 載入好友列表
+                        await loadFriendsList();
+                    } catch (error) {
+                        console.error("註冊用戶失敗:", error);
+                    }
                 }
             } catch (err) {
-                console.error(err);
+                console.error("SignalR連接失敗:", err);
                 setTimeout(startSignalRConnection, 5000);
             }
         }
@@ -402,6 +500,57 @@
                 sendMessage();
             }
         });
+
+        // 用戶上線事件處理
+        connection.on("UserOnline", (userId) => {
+            console.log(`User ${userId} came online`);
+            // 找到對應的好友元素
+            const friendItem = $(`.friend-item[data-id="${userId}"]`);
+            if (friendItem.length) {
+                // 更新狀態點為在線
+                friendItem.find('.status-dot')
+                    .removeClass('offline')
+                    .addClass('online');
+
+                // 將好友項移動到在線列表
+                const onlineList = $('#friends-list .list-group:eq(0)');
+                friendItem.appendTo(onlineList);
+
+                // 更新計數
+                updateFriendsCounts();
+            }
+        });
+
+        // 用戶離線事件處理
+        connection.on("UserOffline", (userId) => {
+            console.log(`User ${userId} went offline`);
+            // 找到對應的好友元素
+            const friendItem = $(`.friend-item[data-id="${userId}"]`);
+            if (friendItem.length) {
+                // 更新狀態點為離線
+                friendItem.find('.status-dot')
+                    .removeClass('online')
+                    .addClass('offline');
+
+                // 將好友項移動到離線列表
+                const offlineList = $('#friends-list .list-group:eq(1)');
+                friendItem.appendTo(offlineList);
+
+                // 更新計數
+                updateFriendsCounts();
+            }
+        });
+
+         // 更新好友計數的輔助函數
+        function updateFriendsCounts() {
+            // 更新在線好友數量
+            const onlineCount = $('#friends-list .list-group:eq(0) .friend-item').length;
+            $('#friends-list .list-group:eq(0) h4').text(`線上好友 (${onlineCount})`);
+
+            // 更新離線好友數量
+            const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
+            $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
+        }
 
         function logout() {
             // 清除 cookie

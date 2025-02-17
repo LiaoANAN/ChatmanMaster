@@ -10,5 +10,6 @@ namespace Chatman.Interfaces
         Task<bool> UpdateUserAsync(UserInfo user);
         Task<int> RegisterAsync(UserInfo user);
         Task<bool> IsEmailExistsAsync(string email);
+        Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
     }
 }
