@@ -1,9 +1,6 @@
 ﻿@charset "UTF-8";
 /* Home Container */
 .home-container {
-  /*display: flex;
-  height: 100vh;
-  background-color: #f0f0f0;*/
   display: flex;
   height: 100vh;
   width: 100%;
@@ -15,11 +12,6 @@
 
 /* Sidebar */
 .sidebar {
-  /*width: 280px;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;*/
   width: 280px;
   height: 100%;
   display: flex;
@@ -36,7 +28,7 @@
 
 .user-info {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
@@ -45,6 +37,11 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0; /* 防止文字溢出 */
 }
 
 .user-details h3 {
@@ -60,6 +57,65 @@
   margin: 0;
 }
 
+.user-details .bio {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.user-details .edit-bio {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 2px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.user-details .edit-bio:hover {
+  color: #6b7280;
+}
+
+.bio-edit-container {
+  margin-top: 4px;
+}
+
+.bio-edit-container input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+
+.bio-edit-container .bio-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.bio-edit-container button {
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bio-edit-container .save-bio {
+  background-color: #10b981;
+  color: white;
+  border: none;
+}
+
+.bio-edit-container .cancel-bio {
+  background-color: transparent;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
 /* Search Container */
 .search-container {
   padding: 1rem;
@@ -72,13 +128,12 @@
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   font-size: 0.875rem;
-  outline: none; /* 移除點擊時的黑色邊框 */
+  outline: none;
 }
 
-/* 可以添加 focus 狀態的樣式來提供視覺反饋 */
 .search-container input:focus {
-  border-color: #10b981; /* 使用綠色邊框代替 */
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); /* 添加輕微的陰影效果 */
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
 }
 
 .search-container .fas.fa-search {
@@ -219,7 +274,7 @@
   color: #6b7280;
 }
 
-/* 底部按鈕容器 */
+/* Bottom Actions */
 .bottom-actions {
   position: relative;
   padding: 1rem;
@@ -286,15 +341,15 @@
 .popup-menu.active {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto; /* 顯示時接受點擊 */
+  pointer-events: auto;
 }
 
 /* Menu Header */
 .menu-header {
-  padding: 16px 20px; /* 更寬鬆的間距 */
-  border-bottom: 1px solid #f0f0f0; /* 更淺的分隔線 */
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
   font-weight: 500;
-  color: #2c3e50; /* 更柔和的文字顏色 */
+  color: #2c3e50;
   font-size: 0.95rem;
 }
 
@@ -307,46 +362,46 @@
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px; /* 更寬鬆的間距 */
-  color: #64748b; /* 更柔和的文字顏色 */
+  padding: 12px 20px;
+  color: #64748b;
   text-decoration: none;
   transition: all 0.2s ease;
   font-size: 0.9rem;
 }
 
 .menu-item:hover {
-  background-color: #f8fafc; /* 更淺的懸停背景 */
-  color: #334155; /* 懸停時的文字顏色 */
+  background-color: #f8fafc;
+  color: #334155;
 }
 
 .menu-item i {
   width: 20px;
   margin-right: 12px;
-  font-size: 0.9rem; /* 稍小的圖示 */
-  opacity: 0.8; /* 降低圖示不透明度 */
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
 .menu-divider {
   height: 1px;
-  background-color: #f0f0f0; /* 更淺的分隔線 */
+  background-color: #f0f0f0;
   margin: 8px 0;
 }
 
 /* 登出按鈕使用更柔和的紅色 */
 .text-red {
-  color: #f87171 !important; /* 更柔和的紅色 */
+  color: #f87171 !important;
 }
 
 .text-red:hover {
   color: #ef4444 !important;
-  background-color: #fff1f2 !important; /* 紅色的淺色背景 */
+  background-color: #fff1f2 !important;
 }
 
 /* Empty State */
 .empty-state {
-  padding: 28px 20px; /* 更寬鬆的間距 */
+  padding: 28px 20px;
   text-align: center;
-  color: #94a3b8; /* 更柔和的文字顏色 */
+  color: #94a3b8;
 }
 
 .empty-state i {
@@ -377,18 +432,7 @@
   color: #334155;
 }
 
-/* 當選單開啟時的按鈕狀態 */
-.action-container .popup-menu.active + .action-btn {
-  background-color: #f1f5f9;
-  color: #334155;
-}
-
-/* 當選單靠近視窗右邊時的調整 */
-.action-container:last-child .popup-menu {
-  right: 0;
-  left: auto;
-}
-
+/* Mobile Nav Toggle */
 .mobile-nav-toggle {
   display: none;
   position: fixed;
@@ -411,16 +455,15 @@
   }
   .sidebar {
     width: 100%;
-    height: calc(100% - 60px); /* 減去底部導航的高度 */
+    height: calc(100% - 60px);
     position: fixed;
     top: 0;
     left: 0;
     z-index: 10;
   }
   .main-content {
-    display: none; /* 在手機版先隱藏主內容區 */
+    display: none;
   }
-  /* 彈出選單調整 */
   .popup-menu {
     width: 90%;
     max-width: 360px;
@@ -433,7 +476,6 @@
   .popup-menu.active {
     transform: translateX(-50%) translateY(0);
   }
-  /* 底部導航固定定位 */
   .bottom-actions {
     position: fixed;
     bottom: 0;
@@ -448,7 +490,6 @@
     padding: 0;
     z-index: 20;
   }
-  /* 底部導航按鈕 */
   .action-btn {
     flex: 1;
     height: 100%;
@@ -459,18 +500,15 @@
     background: none;
     color: #64748b;
   }
-  /* 調整搜尋框 */
   .search-container {
     padding: 12px;
   }
-  /* 列表容器 */
   .lists-container {
     flex: 1;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* 為 iOS 添加慣性滾動 */
-    padding-bottom: 60px; /* 為底部導航預留空間 */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 60px;
   }
-  /* 調整用戶資訊區域 */
   .user-profile {
     padding: 12px;
   }
@@ -478,7 +516,7 @@
     display: block;
   }
 }
-/* 當選單靠近視窗底部時的調整 */
+/* Small Screen Height */
 @media (max-height: 600px) {
   .popup-menu {
     bottom: auto;
@@ -489,13 +527,16 @@
     transform: translateY(0);
   }
 }
-/* 處理超小螢幕 */
+/* Very Small Screens */
 @media (max-width: 360px) {
   .popup-menu {
-    width: 98%; /* 更窄的螢幕使用更大的寬度 */
+    width: 98%;
     margin: 0 1%;
   }
   .menu-item {
-    padding: 10px 16px; /* 稍微縮小內邊距 */
+    padding: 10px 16px;
+  }
+  .user-details .bio {
+    max-width: 140px;
   }
 }

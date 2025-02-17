@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Chatman.Helpers;
 using Chatman.Models;
 using Newtonsoft.Json.Linq;
+using System.Security.Claims;
 
 namespace Chatman.Controllers
 {
@@ -61,7 +62,59 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Update
+        [HttpPost]
+        public async Task<IActionResult> UpdateUserBio([FromBody] UpdateUserBioRequest request)
+        {
+            try
+            {
+                var userInfo = WebHelper.GetCurrentUser(this.HttpContext);
+                if (userInfo == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
 
+                int userId = userInfo.UserId;
+                var user = await _userService.GetUserByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "查無用戶資料"
+                    });
+                }
+
+                user.Bio = request.Bio;
+                user.UpdateDate = DateTime.Now;
+                user.UpdateUserId = userId;
+
+                var response = await _userService.UpdateUserBio(user);
+
+                if (response)
+                {
+                    return Ok(new
+                    {
+                        success = true
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "修改個人簽名失敗"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Register failed");
+                return StatusCode(500, new { message = "內部伺服器錯誤" });
+            }
+        }
         #endregion
 
         #region //Delete

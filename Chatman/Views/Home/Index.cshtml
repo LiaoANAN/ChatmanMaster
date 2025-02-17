@@ -14,10 +14,19 @@
         <!-- User Profile Section -->
         <div class="user-profile">
             <div class="user-info">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ48JWGkSOWJegd_jiLj6C5cz-Ityd6OMLR-w&s" alt="User avatar" class="user-avatar">
+                <img id="imgUserImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ48JWGkSOWJegd_jiLj6C5cz-Ityd6OMLR-w&s" alt="User avatar" class="user-avatar">
                 <div class="user-details">
                     <h3>John Doe</h3>
                     <p class="status">Online</p>
+                    <p class="bio">Loading...</p>
+                    <span class="edit-bio">編輯個人狀態</span>
+                    <div class="bio-edit-container" style="display: none;">
+                        <input type="text" class="bio-input" maxlength="100" placeholder="新增個人狀態...">
+                        <div class="bio-actions">
+                            <button class="save-bio">儲存</button>
+                            <button class="cancel-bio">取消</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -327,8 +336,77 @@
             const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
             if (userInfo) {
                 $('.user-profile .user-details h3').text(userInfo.userName);
-                // TODO: 設置用戶頭像
+                $("#imgUserImage").prop("src", userInfo.userImage);
+
+                // 設置個人狀態
+                if (userInfo.bio) {
+                    $('.user-profile .bio').text(userInfo.bio);
+                } else {
+                    $('.user-profile .bio').text('新增個人狀態...');
+                }
             }
+
+            // 註冊個人狀態編輯事件
+            $('.edit-bio').click(function() {
+                const currentBio = $('.bio').text();
+                $('.bio-input').val(currentBio !== '新增個人狀態...' ? currentBio : '');
+                $('.bio-edit-container').show();
+                $('.bio, .edit-bio').hide();
+                $('.bio-input').focus();
+            });
+
+            $('.cancel-bio').click(function() {
+                $('.bio-edit-container').hide();
+                $('.bio, .edit-bio').show();
+            });
+
+            $('.save-bio').click(async function() {
+                const newBio = $('.bio-input').val().trim();
+                try {
+                    const response = await $.ajax({
+                        url: '/User/UpdateUserBio',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ bio: newBio })
+                    });
+
+                    if (response.success) {
+                        $('.bio').text(newBio || '新增個人狀態...');
+                        $('.bio-edit-container').hide();
+                        $('.bio, .edit-bio').show();
+
+                        // 更新本地存儲的用戶信息
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+                        if (userInfo) {
+                            userInfo.bio = newBio;
+                            if (localStorage.getItem('userInfo')) {
+                                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                            } else {
+                                sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+                            }
+                        }
+                    } else {
+                        alert('更新失敗：' + response.message);
+                    }
+                } catch (error) {
+                    console.error('更新失敗：', error);
+                    alert('更新失敗，請稍後再試');
+                }
+            });
+
+            // 按下 Enter 儲存
+            $('.bio-input').keypress(function(e) {
+                if (e.which == 13) {
+                    $('.save-bio').click();
+                }
+            });
+
+            // 按下 Esc 取消
+            $('.bio-input').keydown(function(e) {
+                if (e.which == 27) {
+                    $('.cancel-bio').click();
+                }
+            });
         }
 
         // 載入好友列表
@@ -345,7 +423,6 @@
                 });
 
                 if (response.success){
-                    successAlert('獲取好友成功', 'test', 1500);
                     renderFriendsList(response.data);
                 }
                 else{
@@ -370,7 +447,7 @@
                 onlineHtml += `
                     <div class="friend-item" data-id="${friend.friendId}">
                         <div class="friend-avatar-container">
-                            <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <img src="${friend.userImage || '/images/default-avatar.png'}" alt="${friend.userName}">
                             <span class="status-dot online"></span>
                         </div>
                         <span class="friend-name">${friend.userName}</span>
@@ -382,7 +459,7 @@
                 offlineHtml += `
                     <div class="friend-item" data-id="${friend.friendId}">
                         <div class="friend-avatar-container">
-                            <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <img src="${friend.userImage || '/images/default-avatar.png'}" alt="${friend.userName}">
                             <span class="status-dot offline"></span>
                         </div>
                         <span class="friend-name">${friend.userName}</span>

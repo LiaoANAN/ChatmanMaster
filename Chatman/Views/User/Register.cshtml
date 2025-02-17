@@ -160,14 +160,7 @@
                                 window.location.href = '/User/Login';
                             });
                         } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: '註冊失敗',
-                                text: response.message || '發生錯誤',
-                                timer: 1500,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
+                            errorAlert('註冊失敗', response.message || '發生錯誤', 1500);
                         }
                     },
                     error: function (xhr, status, error) {

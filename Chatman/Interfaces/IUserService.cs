@@ -7,9 +7,11 @@ namespace Chatman.Interfaces
     {
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<UserInfo> GetUserByEmailAsync(string email);
+        Task<UserInfo> GetUserByIdAsync(int userId);
         bool ValidatePasswordAsync(string hashedPassword, string inputPassword);
         Task<RegisterResponse> RegisterAsync(RegisterRequest request); 
         Task<bool> IsEmailExistsAsync(string email);
         Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
+        Task<bool> UpdateUserBio(UserInfo user);
     }
 }

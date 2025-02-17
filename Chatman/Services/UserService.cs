@@ -47,7 +47,7 @@ namespace Chatman.Services
                     };
                 }
 
-                var user = await _userRepository.GetByEmailAsync(request.Email);
+                var user = await _userRepository.GetUserByEmailAsync(request.Email);
 
                 if (user == null)
                 {
@@ -100,7 +100,12 @@ namespace Chatman.Services
 
         public async Task<UserInfo> GetUserByEmailAsync(string email)
         {
-            return await _userRepository.GetByEmailAsync(email);
+            return await _userRepository.GetUserByEmailAsync(email);
+        }
+
+        public async Task<UserInfo> GetUserByIdAsync(int userId)
+        {
+            return await _userRepository.GetUserByIdAsync(userId);
         }
 
         private string GenerateJwtToken(UserInfo user)
@@ -188,6 +193,11 @@ namespace Chatman.Services
         public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
         {
             return await _userRepository.GetFriendsByUserIdAsync(userId);
+        }
+
+        public async Task<bool> UpdateUserBio(UserInfo user)
+        {
+            return await _userRepository.UpdateUserBio(user);
         }
     }
 }

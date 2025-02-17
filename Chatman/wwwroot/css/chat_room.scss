@@ -254,6 +254,59 @@
     background-color: #9ca3af;
 }
 
+.bio-edit-container {
+    margin-top: 4px;
+
+    .bio-input {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+        outline: none;
+        transition: all 0.2s ease;
+
+        &:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+        }
+    }
+
+    .bio-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    button {
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .save-bio {
+        background-color: #10b981;
+        color: white;
+        border: none;
+
+        &:hover {
+            background-color: #059669;
+        }
+    }
+
+    .cancel-bio {
+        background-color: transparent;
+        border: 1px solid #e5e7eb;
+        color: #6b7280;
+
+        &:hover {
+            background-color: #f3f4f6;
+        }
+    }
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
     .chat-header {

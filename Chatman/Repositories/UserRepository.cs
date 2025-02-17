@@ -20,14 +20,14 @@ namespace Chatman.Repositories
             _logger = logger;
         }
 
-        public async Task<UserInfo> GetByEmailAsync(string email)
+        public async Task<UserInfo> GetUserByEmailAsync(string email)
         {
             try
             {
                 using var connection = _db.CreateConnection();
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
-                                Birthday, Status, Bio, CreateDate, UpdateDate, 
-                                CreateUserId, UpdateUserId
+                                Birthday, Status, Bio, UserImage
+                                , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email = @Email";
 
@@ -42,17 +42,17 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<UserInfo> GetByIdAsync(int userId)
+        public async Task<UserInfo> GetUserByIdAsync(int userId)
         {
             try
             {
                 using var connection = _db.CreateConnection();
                 const string sql = @"
-                    SELECT UserId, UserCode, Email, Password, Gender, 
-                           Birthday, Status, CreateDate, UpdateDate, 
-                           CreateUserId, UpdateUserId
-                    FROM BAS.UserInfo 
-                    WHERE UserId = @UserId";
+                                    SELECT UserId, UserName, Email, Password, Gender, 
+                                            Birthday, Status, Bio, UserImage
+                                            , CreateDate, UpdateDate, CreateUserId, UpdateUserId
+                                    FROM BAS.UserInfo 
+                                    WHERE UserId = @UserId";
 
                 var user = await connection.QueryFirstOrDefaultAsync<UserInfo>(
                     sql, new { UserId = userId });
@@ -85,6 +85,35 @@ namespace Chatman.Repositories
                                         WHERE UserId = @UserId";
 
                     user.UpdateDate = DateTime.Now;
+                    var rowsAffected = await connection.ExecuteAsync(sql, user);
+
+                    transactionScope.Complete();
+
+                    return rowsAffected > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {UserId}", user.UserId);
+                throw;
+            }
+        }
+
+        public async Task<bool> UpdateUserBio(UserInfo user)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                await connection.OpenAsync();
+                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    const string sql = @"
+                                        UPDATE BAS.UserInfo 
+                                        SET Bio = @Bio,
+                                            UpdateDate = @UpdateDate,
+                                            UpdateUserId = @UpdateUserId
+                                        WHERE UserId = @UserId";
+
                     var rowsAffected = await connection.ExecuteAsync(sql, user);
 
                     transactionScope.Complete();
@@ -157,7 +186,7 @@ namespace Chatman.Repositories
                 using var connection = _db.CreateConnection();
                 sql = @"SELECT a.FriendRelationId, a.UserId, a.FriendId, a.Status
                         , a.CreateDate, a.UpdateDate, a.CreateUserId, a.UpdateUserId
-                        , b.UserName, b.Bio
+                        , b.UserName, b.Bio, b.UserImage
                         FROM BAS.FriendRelation a 
                         INNER JOIN BAS.UserInfo b ON a.FriendId = b.UserId
                         WHERE a.UserId = @UserId";
