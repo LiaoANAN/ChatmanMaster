@@ -10,5 +10,9 @@
   {
     "outputFile": "wwwroot/css/register.css",
     "inputFile": "wwwroot/css/register.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/customer_alert.css",
+    "inputFile": "wwwroot/css/customer_alert.scss"
   }
 ]

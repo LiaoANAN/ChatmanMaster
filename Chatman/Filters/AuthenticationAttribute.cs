@@ -8,7 +8,7 @@ namespace Chatman.Filters
         // 允許匿名訪問的頁面和 API
         private readonly Dictionary<string, string[]> _allowedRoutes = new()
         {
-            { "User", new[] { "Login", "Register", "UserLogin" } }  // UserLogin 是 API endpoint
+            { "User", new[] { "Login", "Register", "UserLogin", "UserRegister" } }  // UserLogin 是 API endpoint
         };
 
         public override void OnActionExecuting(ActionExecutingContext context)

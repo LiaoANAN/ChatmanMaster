@@ -191,6 +191,32 @@ $bg-color: #f9fafb;
     }
 }
 
+.birthday-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .input-label {
+        font-size: 0.875rem;
+        color: $text-secondary;
+        margin-left: 0.25rem;
+    }
+
+    .input-field {
+        @include input-base;
+        // 改善日期選擇器的外觀
+        &::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-right: 0.5rem;
+        }
+        // 未選擇時的佔位文字顏色
+        &:not(:focus):not(:valid) {
+            color: #9ca3af;
+        }
+    }
+}
+
 // Mobile enhancements
 @media (max-width: 768px) {
     html, body {

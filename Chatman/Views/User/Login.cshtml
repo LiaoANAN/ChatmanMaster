@@ -106,11 +106,16 @@
 
                             window.location.href = '/Home/Index';
                         } else {
-                            alert(response.message || '登入失敗');
+                            alert(response.message || '登入失敗', 'error');
                         }
                     },
                     error: function (xhr, status, error) {
-                        alert('登入失敗：' + (xhr.responseJSON?.message || '發生錯誤'));
+                        Swal.fire({
+                              title: '登入失敗!',
+                              text: xhr.responseJSON?.message,
+                              icon: 'error',
+                              confirmButtonText: '確定'
+                            });
                     }
                 });
             });

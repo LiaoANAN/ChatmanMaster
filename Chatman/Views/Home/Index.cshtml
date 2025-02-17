@@ -203,7 +203,28 @@
 
 @section Scripts {
     <script>
+        // SignalR 連接
+        let connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
         $(document).ready(function() {
+            // 初始化
+            initializeChat();
+
+            // 載入用戶資訊
+            loadUserProfile();
+
+            // 載入好友列表
+            loadFriendsList();
+
+            // 啟動 SignalR 連接
+            startSignalRConnection();
+        });
+
+        // 初始化聊天相關功能
+        function initializeChat() {
             // Tab switching
             $('.tab-btn').click(function() {
                 $('.tab-btn').removeClass('active');
@@ -214,126 +235,158 @@
                 $(`#${tabId}-list`).removeClass('hidden');
             });
 
-            // Friend item click handler
-            $('.friend-item, .group-item').click(function() {
-                $('.friend-item, .group-item').removeClass('selected');
+            // 好友點擊事件
+            $(document).on('click', '.friend-item', function() {
+                $('.friend-item').removeClass('selected');
                 $(this).addClass('selected');
+                openChatRoom($(this));
             });
+        }
 
-            // 點擊按鈕時切換選單
-            $('.action-btn').click(function (e) {
-                e.stopPropagation();
-                const $container = $(this).closest('.action-container');
-                const $menu = $container.find('.popup-menu');
+        // 載入用戶個人資料
+        function loadUserProfile() {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+            console.log(userInfo);
+            if (userInfo) {
+                $('.user-profile .user-details h3').text(userInfo.userName);
+                // TODO: 設置用戶頭像
+            }
+        }
 
-                // 關閉其他選單
-                $('.popup-menu').not($menu).removeClass('active');
-
-                // 檢查是否為手機版
-                const isMobile = window.innerWidth <= 768;
-
-                if (!$menu.hasClass('active')) {
-                    if (isMobile) {
-                        // 手機版的處理邏輯
-                        $menu.css({
-                            'position': 'fixed',
-                            'left': '50%',
-                            'bottom': '70px',
-                            'transform': 'translateX(-50%)',
-                            'width': '90%',
-                            'max-width': '360px'
-                        });
+        // 載入好友列表
+        function loadFriendsList() {
+            $.ajax({
+                url: '/Friend/GetFriendsList',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        renderFriendsList(response.data);
                     } else {
-                        // 電腦版的處理邏輯
-                        const buttonRect = this.getBoundingClientRect();
-                        const menuWidth = $menu.outerWidth();
-                        const windowWidth = window.innerWidth;
-
-                        // 重置樣式
-                        $menu.css({
-                            'position': 'fixed',
-                            'width': '260px',
-                            'transform': 'none'
-                        });
-
-                        // 水平位置調整
-                        if (buttonRect.right + menuWidth > windowWidth) {
-                            $menu.css({
-                                'right': '20px',
-                                'left': 'auto'
-                            });
-                        } else {
-                            $menu.css({
-                                'left': buttonRect.left + 'px',
-                                'right': 'auto'
-                            });
-                        }
-
-                        // 垂直位置調整
-                        if (buttonRect.top > 300) { // 如果按鈕位置較低
-                            $menu.css({
-                                'bottom': '60px',
-                                'top': 'auto'
-                            });
-                        } else {
-                            $menu.css({
-                                'top': buttonRect.bottom + 'px',
-                                'bottom': 'auto'
-                            });
-                        }
+                        console.error('載入好友列表失敗：', response.message);
                     }
-                }
-
-                // 切換選單
-                $menu.toggleClass('active');
-            });
-
-            // 點擊外部關閉選單
-            $(document).click(function (e) {
-                if (!$(e.target).closest('.popup-menu, .action-btn').length) {
-                    $('.popup-menu').removeClass('active');
+                },
+                error: function(xhr, status, error) {
+                    console.error('API錯誤：', error);
                 }
             });
+        }
 
-            // 點擊選單內容時防止選單關閉
-            $('.popup-menu').click(function (e) {
-                e.stopPropagation();
+        // 渲染好友列表
+        function renderFriendsList(friends) {
+            const onlineFriends = friends.filter(f => f.isOnline);
+            const offlineFriends = friends.filter(f => !f.isOnline);
+
+            let onlineHtml = '';
+            let offlineHtml = '';
+
+            onlineFriends.forEach(friend => {
+                onlineHtml += `
+                    <div class="friend-item" data-id="${friend.userId}">
+                        <div class="friend-avatar-container">
+                            <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <span class="status-dot online"></span>
+                        </div>
+                        <span class="friend-name">${friend.userName}</span>
+                    </div>
+                `;
             });
 
-            $('.mobile-nav-toggle').click(function() {
-                $('.sidebar').toggleClass('mobile-hidden');
+            offlineFriends.forEach(friend => {
+                offlineHtml += `
+                    <div class="friend-item" data-id="${friend.userId}">
+                        <div class="friend-avatar-container">
+                            <img src="${friend.avatar || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <span class="status-dot offline"></span>
+                        </div>
+                        <span class="friend-name">${friend.userName}</span>
+                    </div>
+                `;
             });
 
-            $('.friend-item').click(function () {
-                const userName = $(this).find('.friend-name').text();
-                const userAvatar = $(this).find('img').attr('src');
-                const isOnline = $(this).find('.status-dot').hasClass('online');
+            $('#friends-list .list-group:eq(0)').html(`
+                <h4>線上好友</h4>
+                ${onlineHtml}
+            `);
 
-                // 更新聊天室信息
-                $('.chat-user-name').text(userName);
-                $('.chat-user-avatar').attr('src', userAvatar);
-                $('.chat-user-status').text(isOnline ? 'Online' : 'Offline');
+            $('#friends-list .list-group:eq(1)').html(`
+                <h4>離線好友</h4>
+                ${offlineHtml}
+            `);
+        }
 
-                // 隱藏歡迎訊息，顯示聊天室
-                $('#welcome-message').addClass('hidden');
-                $('#chat-room').removeClass('hidden');
+        // 開啟聊天室
+        function openChatRoom(friendElement) {
+            const friendId = friendElement.data('id');
+            const friendName = friendElement.find('.friend-name').text();
+            const friendAvatar = friendElement.find('img').attr('src');
+            const isOnline = friendElement.find('.status-dot').hasClass('online');
 
-                // 在移動設備上，可能需要隱藏側邊欄
-                if (window.innerWidth <= 768) {
-                    $('.sidebar').removeClass('active');
+            // 更新聊天室信息
+            $('.chat-user-name').text(friendName);
+            $('.chat-user-avatar').attr('src', friendAvatar);
+            $('.chat-user-status').text(isOnline ? '在線' : '離線');
+
+            // 隱藏歡迎訊息，顯示聊天室
+            $('#welcome-message').addClass('hidden');
+            $('#chat-room').removeClass('hidden');
+
+            // 載入聊天記錄
+            loadChatHistory(friendId);
+
+            // 在移動設備上，隱藏側邊欄
+            if (window.innerWidth <= 768) {
+                $('.sidebar').removeClass('active');
+            }
+        }
+
+        // 載入聊天記錄
+        function loadChatHistory(friendId) {
+            // TODO: 實作載入聊天記錄的 API 調用
+        }
+
+        // 啟動 SignalR 連接
+        async function startSignalRConnection() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+
+                // 連接後註冊當前用戶
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+                if (userInfo) {
+                    connection.invoke("RegisterUser", userInfo.userId);
                 }
-            });
+            } catch (err) {
+                console.error(err);
+                setTimeout(startSignalRConnection, 5000);
+            }
+        }
+
+        // SignalR 事件處理
+        connection.on("FriendOnline", (userId) => {
+            $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('offline').addClass('online');
+            // TODO: 移動好友項目到在線區域
+        });
+
+        connection.on("FriendOffline", (userId) => {
+            $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('online').addClass('offline');
+            // TODO: 移動好友項目到離線區域
         });
 
         // 發送訊息
         function sendMessage() {
             const message = $('#messageInput').val().trim();
             if (message) {
+                const selectedFriend = $('.friend-item.selected');
+                const friendId = selectedFriend.data('id');
+
+                // TODO: 實作發送訊息的 API 調用
+
+                // 暫時性的本地渲染
                 const messageHtml = `
-                        <div class="message sent">
-                            <div class="message-content">${message}</div>
-                        </div>
-                    `;
+                    <div class="message sent">
+                        <div class="message-content">${message}</div>
+                    </div>
+                `;
                 $('.messages-list').append(messageHtml);
                 $('#messageInput').val('');
 
@@ -342,11 +395,9 @@
             }
         }
 
-        // 發送按鈕點擊事件
+        // 註冊發送訊息的事件處理
         $('.input-action-btn i.fa-paper-plane').parent().click(sendMessage);
-
-        // Enter 鍵發送訊息
-        $('#messageInput').keypress(function (e) {
+        $('#messageInput').keypress(function(e) {
             if (e.which == 13) {
                 sendMessage();
             }

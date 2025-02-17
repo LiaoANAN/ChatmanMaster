@@ -163,6 +163,41 @@
   text-decoration: underline;
 }
 
+.birthday-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.birthday-field .input-label {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-left: 0.25rem;
+}
+.birthday-field .input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.birthday-field .input-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+}
+.birthday-field .input-field::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-right: 0.5rem;
+}
+.birthday-field .input-field:not(:focus):not(:valid) {
+  color: #9ca3af;
+}
+
 @media (max-width: 768px) {
   html, body {
     height: -webkit-fill-available;

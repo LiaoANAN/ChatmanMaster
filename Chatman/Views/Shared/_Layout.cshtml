@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Chatman.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/chat_room.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/customer_alert.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 </head>
 <body>
@@ -39,6 +40,20 @@
         </main>
     </div>
 
+    <div id="custom-alert-container" class="fixed top-0 right-0 z-50 p-4 space-y-4"></div>
+
+    <script type="text/template" id="alert-template">
+        <div class="custom-alert fixed top-4 right-4 flex items-center p-4 rounded-lg shadow-lg transition-all duration-300 max-w-md opacity-0 translate-x-full" role="alert">
+          <div class="flex items-center gap-3">
+            <i class="alert-icon fas fa-check-circle"></i>
+            <p class="text-sm font-medium alert-message"></p>
+          </div>
+          <button class="alert-close ml-4 text-gray-400 hover:text-gray-900">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+    </script>
+
     @* <footer class="border-top footer text-muted">
         <div class="container">
             &copy; 2025 - Chatman - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
@@ -47,8 +62,10 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/customer_alert.js" asp-append-version="true"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

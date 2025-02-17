@@ -54,11 +54,15 @@
                            required>
 
                     <!-- 生日選擇 -->
-                    <input type="date"
-                           id="txtBirthday"
-                           name="birthday"
-                           class="input-field"
-                           required>
+                    <div class="birthday-field">
+                        <label for="txtBirthday" class="input-label">生日</label>
+                        <input type="date"
+                               id="txtBirthday"
+                               name="birthday"
+                               class="input-field"
+                               placeholder="請選擇您的生日"
+                               required>
+                    </div>
 
                     <!-- 性別選擇 -->
                     <div class="gender-group">
@@ -66,7 +70,8 @@
                             <input type="radio"
                                    id="male"
                                    name="gender"
-                                   value="M">
+                                   value="M"
+                                   checked>
                             <label for="male" class="gender-label">男性</label>
                         </div>
                         <div class="gender-option">
@@ -119,7 +124,12 @@
                 e.preventDefault();
 
                 if ($('#txtPassword').val() !== $('#txtConfirmPassword').val()) {
-                    alert('密碼與確認密碼不相符');
+                    Swal.fire({
+                        title: '密碼與確認密碼不相符!',
+                        text: '',
+                        icon: 'error',
+                        confirmButtonText: '確定'
+                    });
                     return;
                 }
 
@@ -138,14 +148,37 @@
                     data: JSON.stringify(registerData),
                     success: function (response) {
                         if (response.success) {
-                            alert('註冊成功！');
-                            window.location.href = '/User/Login';
+                            Swal.fire({
+                                icon: 'success',
+                                title: '註冊成功！',
+                                text: '即將為您導向登入頁面',
+                                timer: 1500,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            }).then((result) => {
+                                // 當提示框關閉後才跳轉
+                                window.location.href = '/User/Login';
+                            });
                         } else {
-                            alert(response.message || '註冊失敗');
+                            Swal.fire({
+                                icon: 'error',
+                                title: '註冊失敗',
+                                text: response.message || '發生錯誤',
+                                timer: 1500,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
                         }
                     },
                     error: function (xhr, status, error) {
-                        alert('註冊失敗：' + (xhr.responseJSON?.message || '發生錯誤'));
+                        Swal.fire({
+                            icon: 'error',
+                            title: xhr.responseJSON?.message,
+                            text: '請更正資料後再繼續進行註冊。',
+                            timer: 1500,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
                     }
                 });
             });
