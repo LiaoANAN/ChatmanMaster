@@ -696,8 +696,7 @@
                         dataType: 'json'
                     });
 
-                    console.log(response);
-                    //renderSearchResults(response);
+                    renderSearchResults(response.data);
                 } catch (error) {
                     console.error('搜尋失敗:', error);
                 }
