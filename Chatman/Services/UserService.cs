@@ -108,6 +108,11 @@ namespace Chatman.Services
             return await _userRepository.GetUserByIdAsync(userId);
         }
 
+        public async Task<List<UserInfo>> GetUserInfoAsync(string keyword)
+        {
+            return await _userRepository.GetUserInfoAsync(keyword);
+        }
+
         private string GenerateJwtToken(UserInfo user)
         {
             var secretKey = _configuration["Jwt:SecretKey"];

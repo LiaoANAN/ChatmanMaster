@@ -7,6 +7,8 @@ namespace Chatman.Interfaces
     {
         Task<UserInfo> GetUserByEmailAsync(string email);
         Task<UserInfo> GetUserByIdAsync(int userId);
+
+        Task<List<UserInfo>> GetUserInfoAsync(string keyword);
         Task<bool> UpdateUserAsync(UserInfo user);
         Task<bool> UpdateUserBio(UserInfo user);
         Task<int> RegisterAsync(UserInfo user);

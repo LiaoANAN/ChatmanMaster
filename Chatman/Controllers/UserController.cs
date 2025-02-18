@@ -5,9 +5,11 @@ using Chatman.Helpers;
 using Chatman.Models;
 using Newtonsoft.Json.Linq;
 using System.Security.Claims;
+using Chatman.Filters;
 
 namespace Chatman.Controllers
 {
+    [Authentication]
     public class UserController : WebController
     {
         private readonly IUserService _userService;
@@ -38,6 +40,15 @@ namespace Chatman.Controllers
             try
             {
                 var userInfo = WebHelper.GetCurrentUser(this.HttpContext);
+                if (userInfo == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入!"
+                    });
+                }
+
                 var friends = await _userService.GetFriendsByUserIdAsync(userInfo.UserId);
 
                 return Ok(new
@@ -47,6 +58,29 @@ namespace Chatman.Controllers
                 });
             }
             catch (Exception ex) 
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("api/user/getUser")]
+        public async Task<IActionResult> GetUserInfo(string keyword)
+        {
+            try
+            {
+                var users = await _userService.GetUserInfoAsync(keyword);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = users
+                });
+            }
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {

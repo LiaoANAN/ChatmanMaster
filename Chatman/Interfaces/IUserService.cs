@@ -8,6 +8,7 @@ namespace Chatman.Interfaces
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<UserInfo> GetUserByEmailAsync(string email);
         Task<UserInfo> GetUserByIdAsync(int userId);
+        Task<List<UserInfo>> GetUserInfoAsync(string keyword);
         bool ValidatePasswordAsync(string hashedPassword, string inputPassword);
         Task<RegisterResponse> RegisterAsync(RegisterRequest request); 
         Task<bool> IsEmailExistsAsync(string email);

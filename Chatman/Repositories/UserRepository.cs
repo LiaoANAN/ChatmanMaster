@@ -5,6 +5,7 @@ using Dapper;
 using System.Transactions;
 using Microsoft.Data.SqlClient;
 using Chatman.Models.DTOs;
+using System.Diagnostics;
 
 namespace Chatman.Repositories
 {
@@ -13,6 +14,7 @@ namespace Chatman.Repositories
         private readonly IDatabaseConnection _db;
         private readonly ILogger<UserRepository> _logger;
         private string sql = "";
+        private DynamicParameters dynamicParameters = new DynamicParameters();
 
         public UserRepository(IDatabaseConnection db, ILogger<UserRepository> logger)
         {
@@ -61,6 +63,28 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while getting user by id: {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<List<UserInfo>> GetUserInfoAsync(string keyword)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT UserId, UserName, Email, Password, Gender, 
+                                Birthday, Status, Bio, UserImage
+                                , CreateDate, UpdateDate, CreateUserId, UpdateUserId
+                        FROM BAS.UserInfo 
+                        WHERE Email LIKE @Keyword OR UserName LIKE @Keyword";
+
+                var userResult = (await connection.QueryAsync<UserInfo>(sql, new { Keyword = $"%{keyword}%", })).ToList();
+
+                return userResult;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user");
                 throw;
             }
         }

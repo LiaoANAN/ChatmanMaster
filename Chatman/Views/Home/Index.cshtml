@@ -152,6 +152,35 @@
                     </div>
                 </div>
             </div>
+            <!--新增好友-->
+            <div class="action-container">
+                <button class="action-btn" id="addFriendBtn">
+                    <i class="fas fa-user-plus"></i>
+                </button>
+            </div>
+            <div id="addFriendModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>新增好友</h3>
+                        <button class="close-btn">&times;</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <!-- 搜尋區域 -->
+                        <div class="search-box">
+                            <input type="text" id="userSearchInput" placeholder="輸入用戶名稱或 Email 搜尋...">
+                            <button id="searchBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+
+                        <!-- 搜尋結果列表 -->
+                        <div class="search-results">
+                            <!-- 結果會動態插入這裡 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -228,8 +257,14 @@
             // 啟動 SignalR 連接
             startSignalRConnection();
 
+            // 初始化 SignalR 相關設定
+            initializeSignalR();
+
             // 載入用戶資訊
             loadUserProfile();
+
+            // 新增好友相關功能初始化
+            initializeAddFriend();
         });
 
         function initializeChat() {
@@ -536,16 +571,67 @@
             }
         }
 
-        // SignalR 事件處理
-        connection.on("FriendOnline", (userId) => {
-            $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('offline').addClass('online');
-            // TODO: 移動好友項目到在線區域
-        });
+        // 初始化 SignalR 相關設定
+        function initializeSignalR()
+        {
+            // SignalR 事件處理
+            connection.on("FriendOnline", (userId) => {
+                $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('offline').addClass('online');
+            });
 
-        connection.on("FriendOffline", (userId) => {
-            $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('online').addClass('offline');
-            // TODO: 移動好友項目到離線區域
-        });
+            connection.on("FriendOffline", (userId) => {
+                $(`.friend-item[data-id="${userId}"] .status-dot`).removeClass('online').addClass('offline');
+            });
+
+            // 用戶上線事件處理
+            connection.on("UserOnline", (userId) => {
+                // 找到對應的好友元素
+                const friendItem = $(`.friend-item[data-id="${userId}"]`);
+                if (friendItem.length) {
+                    // 更新狀態點為在線
+                    friendItem.find('.status-dot')
+                        .removeClass('offline')
+                        .addClass('online');
+
+                    // 將好友項移動到在線列表
+                    const onlineList = $('#friends-list .list-group:eq(0)');
+                    friendItem.appendTo(onlineList);
+
+                    // 更新計數
+                    updateFriendsCounts();
+                }
+            });
+
+            // 用戶離線事件處理
+            connection.on("UserOffline", (userId) => {
+                // 找到對應的好友元素
+                const friendItem = $(`.friend-item[data-id="${userId}"]`);
+                if (friendItem.length) {
+                    // 更新狀態點為離線
+                    friendItem.find('.status-dot')
+                        .removeClass('online')
+                        .addClass('offline');
+
+                    // 將好友項移動到離線列表
+                    const offlineList = $('#friends-list .list-group:eq(1)');
+                    friendItem.appendTo(offlineList);
+
+                    // 更新計數
+                    updateFriendsCounts();
+                }
+            });
+
+            // 更新好友計數的輔助函數
+            function updateFriendsCounts() {
+                // 更新在線好友數量
+                const onlineCount = $('#friends-list .list-group:eq(0) .friend-item').length;
+                $('#friends-list .list-group:eq(0) h4').text(`線上好友 (${onlineCount})`);
+
+                // 更新離線好友數量
+                const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
+                $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
+            }
+        }
 
         // 發送訊息
         function sendMessage() {
@@ -568,65 +654,118 @@
                 // 滾動到底部
                 $('.messages-container').scrollTop($('.messages-container')[0].scrollHeight);
             }
+
+            // 註冊發送訊息的事件處理
+            $('.input-action-btn i.fa-paper-plane').parent().click(sendMessage);
+            $('#messageInput').keypress(function (e) {
+                if (e.which == 13) {
+                    sendMessage();
+                }
+            });
         }
 
-        // 註冊發送訊息的事件處理
-        $('.input-action-btn i.fa-paper-plane').parent().click(sendMessage);
-        $('#messageInput').keypress(function(e) {
-            if (e.which == 13) {
-                sendMessage();
+        //初始化新增好友功能
+        function initializeAddFriend() {
+            $('#addFriendBtn').click(function () {
+                $('#addFriendModal').removeClass('hidden');
+            });
+
+            $('.close-btn').click(function () {
+                $('#addFriendModal').addClass('hidden');
+            });
+
+            // 搜尋用戶
+            let searchTimeout;
+            $('#userSearchInput').on('input', function () {
+                clearTimeout(searchTimeout);
+                const keyword = $(this).val().trim();
+
+                if (keyword.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        searchUsers(keyword);
+                    }, 500);
+                }
+            });
+
+            // 搜尋用戶函數
+            async function searchUsers(keyword) {
+                try {
+                    const response = await $.ajax({
+                        url: `api/user/getUser?keyword=${encodeURIComponent(keyword)}`,
+                        type: 'GET',
+                        dataType: 'json'
+                    });
+
+                    console.log(response);
+                    //renderSearchResults(response);
+                } catch (error) {
+                    console.error('搜尋失敗:', error);
+                }
             }
-        });
 
-        // 用戶上線事件處理
-        connection.on("UserOnline", (userId) => {
-            console.log(`User ${userId} came online`);
-            // 找到對應的好友元素
-            const friendItem = $(`.friend-item[data-id="${userId}"]`);
-            if (friendItem.length) {
-                // 更新狀態點為在線
-                friendItem.find('.status-dot')
-                    .removeClass('offline')
-                    .addClass('online');
+            // 渲染搜尋結果
+            function renderSearchResults(users) {
+                const $results = $('.search-results');
+                $results.empty();
 
-                // 將好友項移動到在線列表
-                const onlineList = $('#friends-list .list-group:eq(0)');
-                friendItem.appendTo(onlineList);
+                if (users.length === 0) {
+                    $results.html('<div class="no-results">找不到符合的用戶</div>');
+                    return;
+                }
 
-                // 更新計數
-                updateFriendsCounts();
+                users.forEach(user => {
+                    const $userItem = $(`
+                        <div class="user-item">
+                            <div class="user-info">
+                                <img src="/images/default-avatar.png" alt="${user.userName}">
+                                <div class="user-details">
+                                    <span class="user-name">${user.userName}</span>
+                                    <span class="user-email">${user.email}</span>
+                                </div>
+                            </div>
+                            ${getActionButton(user)}
+                        </div>
+                    `);
+
+                    $results.append($userItem);
+                });
             }
-        });
 
-        // 用戶離線事件處理
-        connection.on("UserOffline", (userId) => {
-            console.log(`User ${userId} went offline`);
-            // 找到對應的好友元素
-            const friendItem = $(`.friend-item[data-id="${userId}"]`);
-            if (friendItem.length) {
-                // 更新狀態點為離線
-                friendItem.find('.status-dot')
-                    .removeClass('online')
-                    .addClass('offline');
-
-                // 將好友項移動到離線列表
-                const offlineList = $('#friends-list .list-group:eq(1)');
-                friendItem.appendTo(offlineList);
-
-                // 更新計數
-                updateFriendsCounts();
+            // 根據好友狀態返回對應的按鈕
+            function getActionButton(user) {
+                switch (user.friendshipStatus) {
+                    case 'none':
+                        return `<button class="add-friend-btn" data-id="${user.userId}">新增好友</button>`;
+                    case 'pending':
+                        return '<button class="pending-btn" disabled>等待確認</button>';
+                    case 'friends':
+                        return '<button class="friends-btn" disabled>已是好友</button>';
+                    default:
+                        return '';
+                }
             }
-        });
 
-         // 更新好友計數的輔助函數
-        function updateFriendsCounts() {
-            // 更新在線好友數量
-            const onlineCount = $('#friends-list .list-group:eq(0) .friend-item').length;
-            $('#friends-list .list-group:eq(0) h4').text(`線上好友 (${onlineCount})`);
+            // 發送好友請求
+            $(document).on('click', '.add-friend-btn', async function () {
+                const receiverId = $(this).data('id');
+                try {
+                    const response = await $.ajax({
+                        url: '/api/friend/request',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            receiverId: receiverId,
+                            message: '希望能加你為好友'
+                        })
+                    });
 
-            // 更新離線好友數量
-            const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
-            $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
+                    if (response.success) {
+                        $(this).replaceWith('<button class="pending-btn" disabled>等待確認</button>');
+                    }
+                } catch (error) {
+                    console.error('發送好友請求失敗:', error);
+                }
+            });
         }
 
         function logout() {
