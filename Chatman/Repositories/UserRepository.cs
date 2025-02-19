@@ -22,6 +22,7 @@ namespace Chatman.Repositories
             _logger = logger;
         }
 
+        #region //Get
         public async Task<UserInfo> GetUserByEmailAsync(string email)
         {
             try
@@ -35,6 +36,7 @@ namespace Chatman.Repositories
 
                 var user = await connection.QueryFirstOrDefaultAsync<UserInfo>(
                     sql, new { Email = email });
+
                 return user;
             }
             catch (Exception ex)
@@ -67,13 +69,13 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<List<UserInfo>> GetUserInfoAsync(string keyword)
+        public async Task<List<UserInfo>> GetUserByKeywordAsync(string keyword)
         {
             try
             {
                 using var connection = _db.CreateConnection();
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
-                                Birthday, Status, Bio, UserImage
+                                Birthday, Status, ISNULL(Bio, '') Bio, UserImage
                                 , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email LIKE @Keyword OR UserName LIKE @Keyword";
@@ -89,6 +91,78 @@ namespace Chatman.Repositories
             }
         }
 
+        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT a.FriendRelationId, a.UserId, a.FriendId, a.Status
+                        , a.CreateDate, a.UpdateDate, a.CreateUserId, a.UpdateUserId
+                        , b.UserName, b.Bio, b.UserImage
+                        FROM BAS.FriendRelation a 
+                        INNER JOIN BAS.UserInfo b ON a.FriendId = b.UserId
+                        WHERE a.UserId = @UserId";
+
+                var friends = (await connection.QueryAsync<FriendRelation>(sql, new { UserId = userId })).ToList();
+
+                return friends;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<bool> CheckFriendStatusAsync(int userId, int friendId)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT TOP 1 1
+                        FROM BAS.FriendRelation a 
+                        WHERE (a.UserId = @UserId AND a.FriendId = @FriendId)
+                        OR (a.UserId = @FriendId AND a.FriendId = @UserId)";
+
+                var result = await connection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
+
+                return result != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<bool> CheckFriendRequestAsync(int userId, int friendId)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT TOP 1 1
+                        FROM BAS.FriendRequest a 
+                        WHERE a.SenderId = @UserId 
+                        AND a.ReceiverId = @FriendId
+                        AND a.Status = 'P'";
+
+                var result = await connection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
+
+                return result != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
+                throw;
+            }
+        }
+        #endregion
+
+        #region //Add
+
+        #endregion
+
+        #region //Update
         public async Task<bool> UpdateUserAsync(UserInfo user)
         {
             try
@@ -151,7 +225,13 @@ namespace Chatman.Repositories
                 throw;
             }
         }
+        #endregion
 
+        #region //Delete
+
+        #endregion
+
+        #region //Login
         public async Task<int> RegisterAsync(UserInfo user)
         {
             try
@@ -202,28 +282,6 @@ namespace Chatman.Repositories
                 throw;
             }
         }
-
-        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
-        {
-            try
-            {
-                using var connection = _db.CreateConnection();
-                sql = @"SELECT a.FriendRelationId, a.UserId, a.FriendId, a.Status
-                        , a.CreateDate, a.UpdateDate, a.CreateUserId, a.UpdateUserId
-                        , b.UserName, b.Bio, b.UserImage
-                        FROM BAS.FriendRelation a 
-                        INNER JOIN BAS.UserInfo b ON a.FriendId = b.UserId
-                        WHERE a.UserId = @UserId";
-
-                var friends = (await connection.QueryAsync<FriendRelation>(sql, new { UserId = userId })).ToList();
-                
-                return friends;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
-                throw;
-            }
-        }
+        #endregion
     }
 }

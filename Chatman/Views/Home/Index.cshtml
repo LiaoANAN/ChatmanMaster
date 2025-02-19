@@ -716,10 +716,11 @@
                     const $userItem = $(`
                         <div class="user-item">
                             <div class="user-info">
-                                <img src="/images/default-avatar.png" alt="${user.userName}">
+                                <img src="${user.userImage}" alt="${user.userName}">
                                 <div class="user-details">
                                     <span class="user-name">${user.userName}</span>
                                     <span class="user-email">${user.email}</span>
+                                    <span class="user-email">${user.bio}</span>
                                 </div>
                             </div>
                             ${getActionButton(user)}
@@ -732,12 +733,12 @@
 
             // 根據好友狀態返回對應的按鈕
             function getActionButton(user) {
-                switch (user.friendshipStatus) {
-                    case 'none':
+                switch (user.friendStatus) {
+                    case 'N':
                         return `<button class="add-friend-btn" data-id="${user.userId}">新增好友</button>`;
-                    case 'pending':
+                    case 'P':
                         return '<button class="pending-btn" disabled>等待確認</button>';
-                    case 'friends':
+                    case 'Y':
                         return '<button class="friends-btn" disabled>已是好友</button>';
                     default:
                         return '';

@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
 using Azure.Core;
 using Chatman.Helpers;
+using Microsoft.AspNetCore.Routing.Tree;
 
 namespace Chatman.Services
 {
@@ -25,6 +26,7 @@ namespace Chatman.Services
             _logger = logger;
         }
 
+        #region //Login
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {
             try
@@ -96,21 +98,6 @@ namespace Chatman.Services
                     Message = "登入過程發生錯誤"
                 };
             }
-        }
-
-        public async Task<UserInfo> GetUserByEmailAsync(string email)
-        {
-            return await _userRepository.GetUserByEmailAsync(email);
-        }
-
-        public async Task<UserInfo> GetUserByIdAsync(int userId)
-        {
-            return await _userRepository.GetUserByIdAsync(userId);
-        }
-
-        public async Task<List<UserInfo>> GetUserInfoAsync(string keyword)
-        {
-            return await _userRepository.GetUserInfoAsync(keyword);
         }
 
         private string GenerateJwtToken(UserInfo user)
@@ -194,15 +181,65 @@ namespace Chatman.Services
         {
             return await _userRepository.IsEmailExistsAsync(email);
         }
+        #endregion
+
+        #region //Get
+        public async Task<UserInfo> GetUserByEmailAsync(string email)
+        {
+            return await _userRepository.GetUserByEmailAsync(email);
+        }
+
+        public async Task<UserInfo> GetUserByIdAsync(int userId)
+        {
+            return await _userRepository.GetUserByIdAsync(userId);
+        }
+
+        public async Task<List<GetUserByKeywordResponse>> GetUserByKeywordAsync(string keyword, int userId)
+        {
+            var users = await _userRepository.GetUserByKeywordAsync(keyword);
+
+            List<GetUserByKeywordResponse> responses = new List<GetUserByKeywordResponse>();
+            foreach (var user in users)
+            {
+                if (user.UserId == userId) continue;
+
+                bool isFriend = await _userRepository.CheckFriendStatusAsync(userId, user.UserId);
+                bool isRequest = await _userRepository.CheckFriendRequestAsync(userId, user.UserId);
+
+                responses.Add(new GetUserByKeywordResponse()
+                {
+                    UserId = user.UserId,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    Gender = user.Gender,
+                    Bio = user.Bio,
+                    UserImage = user.UserImage,
+                    FriendStatus = isFriend ? "Y" : isRequest ? "P" : "N"
+                });
+            }
+
+            return responses;
+        }
 
         public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
         {
             return await _userRepository.GetFriendsByUserIdAsync(userId);
         }
+        #endregion
 
+        #region //Add
+
+        #endregion
+
+        #region //Update
         public async Task<bool> UpdateUserBio(UserInfo user)
         {
             return await _userRepository.UpdateUserBio(user);
         }
+        #endregion
+
+        #region //Delete
+
+        #endregion
     }
 }

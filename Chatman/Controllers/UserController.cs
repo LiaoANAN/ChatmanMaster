@@ -72,7 +72,17 @@ namespace Chatman.Controllers
         {
             try
             {
-                var users = await _userService.GetUserInfoAsync(keyword);
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var users = await _userService.GetUserByKeywordAsync(keyword, user.UserId);
 
                 return Ok(new
                 {
