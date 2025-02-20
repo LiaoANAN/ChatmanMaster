@@ -1,5 +1,6 @@
 ﻿using Chatman.Models;
 using Chatman.Models.DTOs;
+using Microsoft.Data.SqlClient;
 
 namespace Chatman.Interfaces
 {
@@ -8,19 +9,21 @@ namespace Chatman.Interfaces
         #region //Get
         Task<UserInfo> GetUserByEmailAsync(string email);
         Task<UserInfo> GetUserByIdAsync(int userId);
-        Task<List<UserInfo>> GetUserByKeywordAsync(string keyword);
+        Task<List<UserInfo>> GetUserByKeywordAsync(string keyword, SqlConnection sqlConnection);
         Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
-        Task<bool> CheckFriendStatusAsync(int userId, int friendId);
-        Task<bool> CheckFriendRequestAsync(int userId, int friendId);
+        Task<bool> CheckFriendStatusAsync(int userId, int friendId, SqlConnection sqlConnection);
+        Task<bool> CheckFriendRequestAsync(int userId, int friendId, SqlConnection sqlConnection);
+        Task<List<Notification>> GetUnreadNotificationsAsync(int userId);
         #endregion
 
         #region //Add
-
+        Task<int> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
+        Task<(int, string)> AddNotificationAsync(Notification notification, SqlConnection sqlConnection);
         #endregion
 
         #region //Update
         Task<bool> UpdateUserAsync(UserInfo user);
-        Task<bool> UpdateUserBio(UserInfo user);
+        Task<bool> UpdateUserBioAsync(UserInfo user);
         #endregion
 
         #region //Delete

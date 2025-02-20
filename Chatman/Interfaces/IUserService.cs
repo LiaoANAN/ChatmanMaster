@@ -17,14 +17,15 @@ namespace Chatman.Interfaces
         Task<UserInfo> GetUserByIdAsync(int userId);
         Task<List<GetUserByKeywordResponse>> GetUserByKeywordAsync(string keyword, int userId);
         Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
+        Task<List<Notification>> GetUnreadNotificationsAsync(int userId);
         #endregion
 
         #region //Add
-
+        Task<ServiceResponse<bool>> AddFriendRequestAsync(AddFriendRequestRequest request);
         #endregion
 
         #region //Update
-        Task<bool> UpdateUserBio(UserInfo user);
+        Task<bool> UpdateUserBioAsync(UserInfo user);
         #endregion
 
         #region //Delete

@@ -6,6 +6,7 @@ using System.Transactions;
 using Microsoft.Data.SqlClient;
 using Chatman.Models.DTOs;
 using System.Diagnostics;
+using NuGet.Protocol.Plugins;
 
 namespace Chatman.Repositories
 {
@@ -69,18 +70,17 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<List<UserInfo>> GetUserByKeywordAsync(string keyword)
+        public async Task<List<UserInfo>> GetUserByKeywordAsync(string keyword, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
                                 Birthday, Status, ISNULL(Bio, '') Bio, UserImage
                                 , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email LIKE @Keyword OR UserName LIKE @Keyword";
 
-                var userResult = (await connection.QueryAsync<UserInfo>(sql, new { Keyword = $"%{keyword}%", })).ToList();
+                var userResult = (await sqlConnection.QueryAsync<UserInfo>(sql, new { Keyword = $"%{keyword}%", })).ToList();
 
                 return userResult;
             }
@@ -114,17 +114,16 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<bool> CheckFriendStatusAsync(int userId, int friendId)
+        public async Task<bool> CheckFriendStatusAsync(int userId, int friendId, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT TOP 1 1
                         FROM BAS.FriendRelation a 
                         WHERE (a.UserId = @UserId AND a.FriendId = @FriendId)
                         OR (a.UserId = @FriendId AND a.FriendId = @UserId)";
 
-                var result = await connection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
+                var result = await sqlConnection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
 
                 return result != null;
             }
@@ -135,20 +134,42 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<bool> CheckFriendRequestAsync(int userId, int friendId)
+        public async Task<bool> CheckFriendRequestAsync(int userId, int friendId, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT TOP 1 1
                         FROM BAS.FriendRequest a 
                         WHERE a.SenderId = @UserId 
                         AND a.ReceiverId = @FriendId
                         AND a.Status = 'P'";
 
-                var result = await connection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
+                var result = await sqlConnection.QueryFirstOrDefaultAsync(sql, new { UserId = userId, FriendId = friendId });
 
                 return result != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by userId: {userId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId)
+        {
+            try
+            {
+                using var connection = _db.CreateConnection();
+                sql = @"SELECT a.NotificationId, a.UserId, a.Type, a.Message, a.RequestId, a.SenderId, a.IsRead, a.Status 
+                        , b.Email, b.UserName, b.UserImage, b.Gender
+                        FROM BAS.Notification a 
+                        INNER JOIN BAS.UserInfo b ON a.SenderId = b.UserId
+                        WHERE a.UserId = @UserId
+                        AND  a.IsRead = 0";
+
+                var result = (await connection.QueryAsync<Notification>(sql, new { UserId = userId })).ToList();
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -159,7 +180,55 @@ namespace Chatman.Repositories
         #endregion
 
         #region //Add
+        public async Task<int> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"INSERT INTO BAS.FriendRequest (
+                            SenderId, ReceiverId, Message, Status,
+                            CreateDate, UpdateDate, CreateUserId, UpdateUserId
+                        ) 
+                        OUTPUT INSERTED.FriendRequestId 
+                        VALUES (
+                            @SenderId, @ReceiverId, @Message, @Status,
+                            @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
+                        )";
 
+                int friendRequestId = await sqlConnection.ExecuteScalarAsync<int>(sql, request);
+
+                return friendRequestId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {SenderId}", request.SenderId);
+                throw;
+            }
+        }
+
+        public async Task<(int, string)> AddNotificationAsync(Notification notification, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"INSERT INTO BAS.Notification (
+                            UserId, Type, Message, RequestId, SenderId, IsRead, Status
+                            CreateDate, UpdateDate, CreateUserId, UpdateUserId
+                        ) 
+                        OUTPUT INSERTED.NotificationId 
+                        VALUES (
+                            @UserId, @Type, @Message, @RequestId, @SenderId, @IsRead, @Status
+                            @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
+                        )";
+
+                int notificationId = await sqlConnection.ExecuteScalarAsync<int>(sql, notification);
+
+                return (notificationId, "success");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {SenderId}", notification.SenderId);
+                return (0, ex.Message);
+            }
+        }
         #endregion
 
         #region //Update
@@ -197,7 +266,7 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<bool> UpdateUserBio(UserInfo user)
+        public async Task<bool> UpdateUserBioAsync(UserInfo user)
         {
             try
             {
@@ -262,7 +331,7 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating user: {Email}", user.Email);
-                throw;
+                throw new SystemException(ex.Message);
             }
         }
 

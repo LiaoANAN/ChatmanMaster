@@ -102,7 +102,14 @@
             <div class="action-container">
                 <button class="action-btn"><i class="fas fa-bell"></i></button>
                 <div class="popup-menu notification-menu">
-                    <div class="menu-header">通知</div>
+                    <div class="menu-header">
+                        <span>通知</span>
+                        <div class="header-actions">
+                            <button class="mark-all-read" title="標記全部已讀">
+                                <i class="fas fa-check-double"></i>
+                            </button>
+                        </div>
+                    </div>
                     <div class="menu-content">
                         <div class="empty-state">
                             <i class="fas fa-bell-slash"></i>
@@ -265,6 +272,9 @@
 
             // 新增好友相關功能初始化
             initializeAddFriend();
+
+            //初始化通知功能
+            initializeNotifications();
         });
 
         function initializeChat() {
@@ -399,7 +409,7 @@
                 const newBio = $('.bio-input').val().trim();
                 try {
                     const response = await $.ajax({
-                        url: '/User/UpdateUserBio',
+                        url: '/User/UpdateUserBioAsync',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({ bio: newBio })
@@ -559,14 +569,17 @@
                 if (userInfo && userInfo.userId) {
                     try {
                         await connection.invoke("RegisterUser", parseInt(userInfo.userId));
+                        console.log("User registered with SignalR");
+
                         // 載入好友列表
                         await loadFriendsList();
                     } catch (error) {
-                        console.error("註冊用戶失敗:", error);
+                        console.error("Failed to register user with SignalR:", error);
                     }
                 }
             } catch (err) {
-                console.error("SignalR連接失敗:", err);
+                console.error("SignalR connection failed:", err);
+                // 5秒後重試連接
                 setTimeout(startSignalRConnection, 5000);
             }
         }
@@ -621,6 +634,27 @@
                 }
             });
 
+            // 好友申請通知
+            connection.on("ReceiveFriendRequest", (notification) => {
+                console.log("Received friend request notification:", notification);
+
+                // 添加通知到選單
+                addNotificationToMenu({
+                    id: notification.requestId,
+                    type: 'friendRequest',
+                    senderName: notification.senderName,
+                    senderAvatar: notification.senderAvatar || 'default-avatar-url',
+                    message: notification.message,
+                    createTime: notification.createTime
+                });
+
+                // 更新通知計數
+                updateNotificationCount();
+
+                // 可選：顯示 toast 通知
+                showToastNotification(`收到來自 ${notification.senderName} 的好友請求`);
+            });
+
             // 更新好友計數的輔助函數
             function updateFriendsCounts() {
                 // 更新在線好友數量
@@ -631,6 +665,28 @@
                 const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
                 $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
             }
+        }
+
+        // 顯示 Toast 通知
+        function showToastNotification(message) {
+            // 如果已存在 toast，先移除
+            $('.toast-notification').remove();
+
+            const toast = $(`
+                <div class="toast-notification">
+                    <div class="toast-content">
+                        <i class="fas fa-user-plus"></i>
+                        <span>${message}</span>
+                    </div>
+                </div>
+            `).appendTo('body');
+
+            // 3秒後自動消失
+            setTimeout(() => {
+                toast.fadeOut(300, function () {
+                    $(this).remove();
+                });
+            }, 3000);
         }
 
         // 發送訊息
@@ -750,7 +806,7 @@
                 const receiverId = $(this).data('id');
                 try {
                     const response = await $.ajax({
-                        url: '/api/friend/request',
+                        url: '/api/user/sendFriendRequest',
                         method: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({
@@ -766,6 +822,196 @@
                     console.error('發送好友請求失敗:', error);
                 }
             });
+        }
+
+        // 初始化通知功能
+        function initializeNotifications() {
+            // 標記全部已讀按鈕點擊事件
+            $('.mark-all-read').click(function (e) {
+                e.stopPropagation();
+                markAllNotificationsAsRead();
+            });
+
+            // 載入未讀通知
+            loadUnreadNotifications();
+        }
+
+        // 載入未讀通知
+        async function loadUnreadNotifications() {
+            try {
+                const response = await $.ajax({
+                    url: '/api/user/getUnreadNotifications',
+                    type: 'GET'
+                });
+
+                console.log(response);
+
+                if (response.success) {
+                    response.data.forEach(notification => {
+                        addNotificationToMenu(notification);
+                    });
+                    updateNotificationCount();
+                }
+            } catch (error) {
+                console.error('載入通知失敗:', error);
+            }
+        }
+
+        // 添加通知到選單
+        function addNotificationToMenu(notification) {
+            const $notificationMenu = $('.notification-menu .menu-content');
+
+            // 如果是空狀態，先清除
+            $notificationMenu.find('.empty-state').remove();
+
+            // 格式化日期時間
+            const createTime = new Date(notification.createTime);
+            const formattedTime = formatTime(createTime);
+
+            // 根據通知類型生成不同的 HTML
+            let notificationHtml = '';
+
+            if (notification.type === 'friendRequest') {
+                notificationHtml = `
+                    <div class="notification-item friend-request" data-id="${notification.id}">
+                        <div class="notification-content">
+                            <div class="user-info">
+                                <img src="${notification.senderImage}"
+                                     alt="${notification.senderName}"
+                                     class="user-avatar"">
+                                <div class="user-details">
+                                    <span class="user-name">${notification.senderName}</span>
+                                    <span class="notification-text">發送了好友邀請</span>
+                                </div>
+                            </div>
+                            <p class="message">${notification.message || '希望能加你為好友'}</p>
+                            <div class="notification-actions">
+                                <button class="accept-btn" onclick="handleFriendRequest(${notification.requestId}, 'accept')">
+                                    接受
+                                </button>
+                                        <button class="reject-btn" onclick="handleFriendRequest(${notification.requestId}, 'reject')">
+                                    拒絕
+                                </button>
+                            </div>
+                        </div>
+                        <div class="notification-time">${formattedTime}</div>
+                    </div>
+                `;
+            }
+
+            // 添加到選單頂部
+            $notificationMenu.prepend(notificationHtml);
+
+            // 更新通知計數
+            updateNotificationCount();
+        }
+
+        // 處理好友請求
+        async function handleFriendRequest(requestId, action) {
+            try {
+                const response = await $.ajax({
+                    url: '/api/user/handleFriendRequest',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        requestId: requestId,
+                        action: action
+                    })
+                });
+
+                if (response.success) {
+                    // 移除通知項目
+                    $(`.notification-item[data-id="${requestId}"]`).slideUp(300, function () {
+                        $(this).remove();
+                        updateNotificationCount();
+
+                        // 如果是接受請求，重新載入好友列表
+                        if (action === 'accept') {
+                            loadFriendsList();
+                        }
+
+                        // 如果沒有通知了，顯示空狀態
+                        if ($('.notification-item').length === 0) {
+                            showEmptyState();
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('處理好友請求失敗:', error);
+                alert('處理失敗，請稍後再試');
+            }
+        }
+
+        // 更新通知計數
+        function updateNotificationCount() {
+            const count = $('.notification-item').length;
+            const $notificationBtn = $('.action-btn i.fa-bell').parent();
+
+            if (count > 0) {
+                // 更新或添加計數標記
+                let $badge = $notificationBtn.find('.notification-badge');
+                if ($badge.length === 0) {
+                    $notificationBtn.append(`<span class="notification-badge">${count}</span>`);
+                } else {
+                    $badge.text(count);
+                }
+            } else {
+                // 移除計數標記
+                $notificationBtn.find('.notification-badge').remove();
+            }
+        }
+
+        // 顯示空狀態
+        function showEmptyState() {
+            const $notificationMenu = $('.notification-menu .menu-content');
+            $notificationMenu.html(`
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>目前沒有新通知</p>
+                </div>
+            `);
+        }
+
+        // 標記所有通知為已讀
+        async function markAllNotificationsAsRead() {
+            try {
+                const response = await $.ajax({
+                    url: '/api/user/markAllNotificationsAsRead',
+                    type: 'POST'
+                });
+
+                if (response.success) {
+                    // 更新 UI
+                    $('.notification-item').removeClass('unread');
+                    updateNotificationCount();
+                }
+            } catch (error) {
+                console.error('標記已讀失敗:', error);
+            }
+        }
+
+        // 格式化時間
+        function formatTime(date) {
+            if (!date || isNaN(date.getTime())) {
+                return '剛剛';
+            }
+
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // 差異秒數
+
+            if (diff < 60) {
+                return '剛剛';
+            } else if (diff < 3600) {
+                return `${Math.floor(diff / 60)} 分鐘前`;
+            } else if (diff < 86400) {
+                return `${Math.floor(diff / 3600)} 小時前`;
+            } else {
+                // 自定義日期格式
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}/${month}/${day}`;
+            }
         }
 
         function logout() {

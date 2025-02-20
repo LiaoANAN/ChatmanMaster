@@ -99,15 +99,76 @@ namespace Chatman.Controllers
                 });
             }
         }
+
+        [HttpGet("api/user/getUnreadNotifications")]
+        public async Task<IActionResult> GetUnreadNotifications()
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var result = await _userService.GetUnreadNotificationsAsync(user.UserId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
         #endregion
 
         #region //Add
+        [HttpPost("api/user/sendFriendRequest")]
+        public async Task<IActionResult> AddFriendRequest([FromBody] AddFriendRequestRequest request)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
 
+                request.SendId = user.UserId;
+                request.SenderName = user.UserName;
+                request.SenderImage = user.UserImage;
+
+                var response = await _userService.AddFriendRequestAsync(request);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Add friend request failed");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
         #endregion
 
         #region //Update
         [HttpPost]
-        public async Task<IActionResult> UpdateUserBio([FromBody] UpdateUserBioRequest request)
+        public async Task<IActionResult> UpdateUserBioAsync([FromBody] UpdateUserBioRequest request)
         {
             try
             {
@@ -137,7 +198,7 @@ namespace Chatman.Controllers
                 user.UpdateDate = DateTime.Now;
                 user.UpdateUserId = userId;
 
-                var response = await _userService.UpdateUserBio(user);
+                var response = await _userService.UpdateUserBioAsync(user);
 
                 if (response)
                 {

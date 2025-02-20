@@ -73,6 +73,8 @@ CREATE TABLE BAS.FriendRequest (
     Status             nvarchar(1)     NOT NULL,                         -- 狀態(P:待處理, A:已接受, R:已拒絕)
     CreateDate         datetime        NOT NULL    DEFAULT GETDATE(),    -- 新增日期
     UpdateDate         datetime            NULL,                         -- 修改日期
+    CreateUserId       int             NOT NULL,                         -- 新增人員
+    UpdateUserId       int                 NULL,                         -- 修改人員
     CONSTRAINT PK_FriendRequest PRIMARY KEY (FriendRequestId),
     CONSTRAINT FK_FriendRequest_Sender FOREIGN KEY (SenderId) REFERENCES BAS.UserInfo(UserId),
     CONSTRAINT FK_FriendRequest_Receiver FOREIGN KEY (ReceiverId) REFERENCES BAS.UserInfo(UserId)
@@ -88,8 +90,29 @@ CREATE TABLE BAS.GroupInvitation (
     Status             nvarchar(1)     NOT NULL,                         -- 狀態(P:待處理, A:已接受, R:已拒絕)
     CreateDate         datetime        NOT NULL    DEFAULT GETDATE(),    -- 新增日期
     UpdateDate         datetime            NULL,                         -- 修改日期
+    CreateUserId       int             NOT NULL,                         -- 新增人員
+    UpdateUserId       int                 NULL,                         -- 修改人員
     CONSTRAINT PK_GroupInvitation PRIMARY KEY (GroupInvitationId),
     CONSTRAINT FK_GroupInvitation_Group FOREIGN KEY (GroupId) REFERENCES BAS.GroupInfo(GroupId),
     CONSTRAINT FK_GroupInvitation_Inviter FOREIGN KEY (InviterId) REFERENCES BAS.UserInfo(UserId),
     CONSTRAINT FK_GroupInvitation_Invitee FOREIGN KEY (InviteeId) REFERENCES BAS.UserInfo(UserId)
+);
+
+-- 用戶訊息通知紀錄
+CREATE TABLE BAS.Notification (
+    NotificationId      int             IDENTITY,
+    UserId             int             NOT NULL,                         -- 接收通知的用戶
+    Type               nvarchar(20)    NOT NULL,                         -- 通知類型
+    Message            nvarchar(500)   NOT NULL,                         -- 通知內容
+    RequestId          int                 NULL,                         -- 關聯的請求ID
+    SenderId           int                 NULL,                         -- 發送者ID
+    IsRead             bit             NOT NULL    DEFAULT 0,            -- 是否已讀
+    Status             nvarchar(1)     NOT NULL,                         -- 狀態(A:活動, D:刪除)
+    CreateDate         datetime        NOT NULL    DEFAULT GETDATE(),    -- 建立日期
+    UpdateDate         datetime            NULL,                         -- 更新日期
+    CreateUserId       int             NOT NULL,                         -- 新增人員
+    UpdateUserId       int                 NULL,                         -- 修改人員
+    CONSTRAINT PK_Notification PRIMARY KEY (NotificationId),
+    CONSTRAINT FK_Notification_User FOREIGN KEY (UserId) REFERENCES BAS.UserInfo(UserId),
+    CONSTRAINT FK_Notification_Sender FOREIGN KEY (SenderId) REFERENCES BAS.UserInfo(UserId),
 );
