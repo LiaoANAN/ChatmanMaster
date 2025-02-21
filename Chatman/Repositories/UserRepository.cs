@@ -12,30 +12,27 @@ namespace Chatman.Repositories
 {
     public class UserRepository : IUserRepository
     {
-        private readonly IDatabaseConnection _db;
         private readonly ILogger<UserRepository> _logger;
         private string sql = "";
         private DynamicParameters dynamicParameters = new DynamicParameters();
 
-        public UserRepository(IDatabaseConnection db, ILogger<UserRepository> logger)
+        public UserRepository(ILogger<UserRepository> logger)
         {
-            _db = db;
             _logger = logger;
         }
 
         #region //Get
-        public async Task<UserInfo> GetUserByEmailAsync(string email)
+        public async Task<UserInfo> GetUserByEmailAsync(string email, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
                                 Birthday, Status, Bio, UserImage
                                 , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email = @Email";
 
-                var user = await connection.QueryFirstOrDefaultAsync<UserInfo>(
+                var user = await sqlConnection.QueryFirstOrDefaultAsync<UserInfo>(
                     sql, new { Email = email });
 
                 return user;
@@ -47,20 +44,18 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<UserInfo> GetUserByIdAsync(int userId)
+        public async Task<UserInfo> GetUserByIdAsync(int userId, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
-                const string sql = @"
-                                    SELECT UserId, UserName, Email, Password, Gender, 
+                const string sql = @"SELECT UserId, UserName, Email, Password, Gender, 
                                             Birthday, Status, Bio, UserImage
                                             , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                                     FROM BAS.UserInfo 
                                     WHERE UserId = @UserId";
 
-                var user = await connection.QueryFirstOrDefaultAsync<UserInfo>(
-                    sql, new { UserId = userId });
+                var user = await sqlConnection.QueryFirstOrDefaultAsync<UserInfo>(sql, new { UserId = userId });
+                
                 return user;
             }
             catch (Exception ex)
@@ -91,11 +86,10 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
+        public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT a.FriendRelationId, a.UserId, a.FriendId, a.Status
                         , a.CreateDate, a.UpdateDate, a.CreateUserId, a.UpdateUserId
                         , b.UserName, b.Bio, b.UserImage
@@ -103,7 +97,7 @@ namespace Chatman.Repositories
                         INNER JOIN BAS.UserInfo b ON a.FriendId = b.UserId
                         WHERE a.UserId = @UserId";
 
-                var friends = (await connection.QueryAsync<FriendRelation>(sql, new { UserId = userId })).ToList();
+                var friends = (await sqlConnection.QueryAsync<FriendRelation>(sql, new { UserId = userId })).ToList();
 
                 return friends;
             }
@@ -155,11 +149,10 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId)
+        public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT a.NotificationId, a.UserId, a.Type, a.Message, a.RequestId, a.SenderId, a.IsRead, a.Status 
                         , b.Email, b.UserName, b.UserImage, b.Gender
                         FROM BAS.Notification a 
@@ -167,7 +160,7 @@ namespace Chatman.Repositories
                         WHERE a.UserId = @UserId
                         AND  a.IsRead = 0";
 
-                var result = (await connection.QueryAsync<Notification>(sql, new { UserId = userId })).ToList();
+                var result = (await sqlConnection.QueryAsync<Notification>(sql, new { UserId = userId })).ToList();
 
                 return result;
             }
@@ -180,7 +173,7 @@ namespace Chatman.Repositories
         #endregion
 
         #region //Add
-        public async Task<int> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection)
+        public async Task<int?> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection)
         {
             try
             {
@@ -194,18 +187,17 @@ namespace Chatman.Repositories
                             @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
                         )";
 
-                int friendRequestId = await sqlConnection.ExecuteScalarAsync<int>(sql, request);
-
-                return friendRequestId;
+                return await sqlConnection.ExecuteScalarAsync<int>(sql, request);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {SenderId}", request.SenderId);
-                throw;
+
+                return null;
             }
         }
 
-        public async Task<(int, string)> AddNotificationAsync(Notification notification, SqlConnection sqlConnection)
+        public async Task<int?> AddNotificationAsync(Notification notification, SqlConnection sqlConnection)
         {
             try
             {
@@ -219,79 +211,63 @@ namespace Chatman.Repositories
                             @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
                         )";
 
-                int notificationId = await sqlConnection.ExecuteScalarAsync<int>(sql, notification);
-
-                return (notificationId, "success");
+                return await sqlConnection.ExecuteScalarAsync<int>(sql, notification);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {SenderId}", notification.SenderId);
-                return (0, ex.Message);
+
+                return null;
             }
         }
         #endregion
 
         #region //Update
-        public async Task<bool> UpdateUserAsync(UserInfo user)
+        public async Task<bool> UpdateUserAsync(UserInfo user, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
-                await connection.OpenAsync();
-                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
-                {
-                    const string sql = @"
-                                        UPDATE BAS.UserInfo 
-                                        SET Email = @Email,
-                                            Password = @Password,
-                                            Gender = @Gender,
-                                            Birthday = @Birthday,
-                                            Status = @Status,
-                                            UpdateDate = @UpdateDate,
-                                            UpdateUserId = @UpdateUserId
-                                        WHERE UserId = @UserId";
+                sql = @"UPDATE BAS.UserInfo 
+                        SET Email = @Email,
+                            Password = @Password,
+                            Gender = @Gender,
+                            Birthday = @Birthday,
+                            Status = @Status,
+                            UpdateDate = @UpdateDate,
+                            UpdateUserId = @UpdateUserId
+                        WHERE UserId = @UserId";
 
-                    user.UpdateDate = DateTime.Now;
-                    var rowsAffected = await connection.ExecuteAsync(sql, user);
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, user);
 
-                    transactionScope.Complete();
-
-                    return rowsAffected > 0;
-                }
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {UserId}", user.UserId);
-                throw;
+
+                return false;
             }
         }
 
-        public async Task<bool> UpdateUserBioAsync(UserInfo user)
+        public async Task<bool> UpdateUserBioAsync(UserInfo user, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
-                await connection.OpenAsync();
-                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
-                {
-                    const string sql = @"
-                                        UPDATE BAS.UserInfo 
-                                        SET Bio = @Bio,
-                                            UpdateDate = @UpdateDate,
-                                            UpdateUserId = @UpdateUserId
-                                        WHERE UserId = @UserId";
+                sql = @"UPDATE BAS.UserInfo 
+                        SET Bio = @Bio,
+                            UpdateDate = @UpdateDate,
+                            UpdateUserId = @UpdateUserId
+                        WHERE UserId = @UserId";
 
-                    var rowsAffected = await connection.ExecuteAsync(sql, user);
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, user);
 
-                    transactionScope.Complete();
-
-                    return rowsAffected > 0;
-                }
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {UserId}", user.UserId);
-                throw;
+
+                return false;
             }
         }
         #endregion
@@ -301,48 +277,38 @@ namespace Chatman.Repositories
         #endregion
 
         #region //Login
-        public async Task<int> RegisterAsync(UserInfo user)
+        public async Task<(int, string)> RegisterAsync(UserInfo user, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
-                await connection.OpenAsync();
+                sql = @"INSERT INTO BAS.UserInfo (
+                            UserName, Email, Password, Gender, Birthday,
+                            Status, CreateDate, CreateUserId
+                        ) 
+                        OUTPUT INSERTED.UserId 
+                        VALUES (
+                            @UserName, @Email, @Password, @Gender, @Birthday,
+                            @Status, @CreateDate, @CreateUserId
+                        )";
 
-                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
-                {
-                    const string sql = @"
-                                        INSERT INTO BAS.UserInfo (
-                                            UserName, Email, Password, Gender, Birthday,
-                                            Status, CreateDate, CreateUserId
-                                        ) 
-                                        OUTPUT INSERTED.UserId 
-                                        VALUES (
-                                            @UserName, @Email, @Password, @Gender, @Birthday,
-                                            @Status, @CreateDate, @CreateUserId
-                                        )";
+                int userId = await sqlConnection.ExecuteScalarAsync<int>(sql, user);
 
-                    int userId = await connection.ExecuteScalarAsync<int>(sql, user);
-
-                    transactionScope.Complete();
-
-                    return userId;
-                }
+                return (userId, "");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating user: {Email}", user.Email);
-                throw new SystemException(ex.Message);
+                return (0, ex.Message);
             }
         }
 
-        public async Task<bool> IsEmailExistsAsync(string email)
+        public async Task<bool> IsEmailExistsAsync(string email, SqlConnection sqlConnection)
         {
             try
             {
-                using var connection = _db.CreateConnection();
                 sql = @"SELECT TOP 1 1 FROM BAS.UserInfo WHERE Email = @Email";
 
-                var result = await connection.QueryAsync(sql, new { Email = email });
+                var result = await sqlConnection.QueryAsync(sql, new { Email = email });
                 return result.Count() > 0;
             }
             catch (Exception ex)

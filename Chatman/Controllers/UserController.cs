@@ -167,8 +167,8 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Update
-        [HttpPost]
-        public async Task<IActionResult> UpdateUserBioAsync([FromBody] UpdateUserBioRequest request)
+        [HttpPost("api/user/updateUserBio")]
+        public async Task<IActionResult> UpdateUserBio([FromBody] UpdateUserBioRequest request)
         {
             try
             {

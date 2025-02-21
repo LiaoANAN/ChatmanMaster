@@ -409,7 +409,7 @@
                 const newBio = $('.bio-input').val().trim();
                 try {
                     const response = await $.ajax({
-                        url: '/User/UpdateUserBioAsync',
+                        url: '/api/user/updateUserBio',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({ bio: newBio })

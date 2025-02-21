@@ -7,23 +7,23 @@ namespace Chatman.Interfaces
     public interface IUserRepository
     {
         #region //Get
-        Task<UserInfo> GetUserByEmailAsync(string email);
-        Task<UserInfo> GetUserByIdAsync(int userId);
+        Task<UserInfo> GetUserByEmailAsync(string email, SqlConnection sqlConnection);
+        Task<UserInfo> GetUserByIdAsync(int userId, SqlConnection sqlConnection);
         Task<List<UserInfo>> GetUserByKeywordAsync(string keyword, SqlConnection sqlConnection);
-        Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
+        Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId, SqlConnection sqlConnection);
         Task<bool> CheckFriendStatusAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<bool> CheckFriendRequestAsync(int userId, int friendId, SqlConnection sqlConnection);
-        Task<List<Notification>> GetUnreadNotificationsAsync(int userId);
+        Task<List<Notification>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection);
         #endregion
 
         #region //Add
-        Task<int> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
-        Task<(int, string)> AddNotificationAsync(Notification notification, SqlConnection sqlConnection);
+        Task<int?> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
+        Task<int?> AddNotificationAsync(Notification notification, SqlConnection sqlConnection);
         #endregion
 
         #region //Update
-        Task<bool> UpdateUserAsync(UserInfo user);
-        Task<bool> UpdateUserBioAsync(UserInfo user);
+        Task<bool> UpdateUserAsync(UserInfo user, SqlConnection sqlConnection);
+        Task<bool> UpdateUserBioAsync(UserInfo user, SqlConnection sqlConnection);
         #endregion
 
         #region //Delete
@@ -31,8 +31,8 @@ namespace Chatman.Interfaces
         #endregion
 
         #region //Login
-        Task<int> RegisterAsync(UserInfo user);
-        Task<bool> IsEmailExistsAsync(string email);
+        Task<(int, string)> RegisterAsync(UserInfo user, SqlConnection sqlConnection);
+        Task<bool> IsEmailExistsAsync(string email, SqlConnection sqlConnection);
         #endregion
     }
 }

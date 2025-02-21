@@ -38,63 +38,66 @@ namespace Chatman.Services
         {
             try
             {
-                if (request.Email == null)
+                using (SqlConnection sqlConnection = _db.CreateConnection())
                 {
+                    if (request.Email == null)
+                    {
+                        return new LoginResponse
+                        {
+                            Success = false,
+                            Message = "信箱不能為空"
+                        };
+                    }
+
+                    if (request.Password == null)
+                    {
+                        return new LoginResponse
+                        {
+                            Success = false,
+                            Message = "密碼不能為空"
+                        };
+                    }
+
+                    var user = await _userRepository.GetUserByEmailAsync(request.Email, sqlConnection);
+
+                    if (user == null)
+                    {
+                        return new LoginResponse
+                        {
+                            Success = false,
+                            Message = "使用者不存在"
+                        };
+                    }
+
+                    if (user.Status != "A")
+                    {
+                        return new LoginResponse
+                        {
+                            Success = false,
+                            Message = "帳號已被停用"
+                        };
+                    }
+
+                    if (!ValidatePasswordAsync(request.Password, user.Password))
+                    {
+                        return new LoginResponse
+                        {
+                            Success = false,
+                            Message = "密碼錯誤"
+                        };
+                    }
+
+                    // 生成 JWT Token
+                    var token = GenerateJwtToken(user);
+
                     return new LoginResponse
                     {
-                        Success = false,
-                        Message = "信箱不能為空"
+                        Success = true,
+                        Message = "登入成功",
+                        Token = token,
+                        UserInfo = user
                     };
                 }
-
-                if (request.Password == null)
-                {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "密碼不能為空"
-                    };
-                }
-
-                var user = await _userRepository.GetUserByEmailAsync(request.Email);
-
-                if (user == null)
-                {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "使用者不存在"
-                    };
-                }
-
-                if (user.Status != "A")
-                {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "帳號已被停用"
-                    };
-                }
-
-                if (!ValidatePasswordAsync(request.Password, user.Password))
-                {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "密碼錯誤"
-                    };
-                }
-
-                // 生成 JWT Token
-                var token = GenerateJwtToken(user);
-
-                return new LoginResponse
-                {
-                    Success = true,
-                    Message = "登入成功",
-                    Token = token,
-                    UserInfo = user
-                };
             }
             catch (Exception ex)
             {
@@ -144,38 +147,46 @@ namespace Chatman.Services
         {
             try
             {
-                //確認信箱是否重複
-                if (await IsEmailExistsAsync(request.Email))
+                using TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
                 {
-                    return RegisterResponse.ErrorResponse("此電子郵件已被註冊");
-                }
-
-                UserInfo user = new UserInfo
-                {
-                    UserName = request.Username,
-                    Email = request.Email,
-                    Password = WebHelper.HashPassword(request.Password),
-                    Gender = request.Gender,
-                    Birthday = request.Birthday,
-                    Status = "A",
-                    CreateDate = DateTime.Now,
-                    CreateUserId = 0
-                };
-
-                int userId = await _userRepository.RegisterAsync(user);
-
-                if (userId > 0)
-                {
-                    return new RegisterResponse()
+                    using (SqlConnection sqlConnection = _db.CreateConnection())
                     {
-                        Success = true,
-                        Message = "註冊成功",
-                        UserId = userId
-                    };
+                        //確認信箱是否重複
+                        if (await IsEmailExistsAsync(request.Email))
+                        {
+                            return RegisterResponse.ErrorResponse("此電子郵件已被註冊");
+                        }
+
+                        var (userId, errorMessage) = await _userRepository.RegisterAsync(new UserInfo
+                        {
+                            UserName = request.Username,
+                            Email = request.Email,
+                            Password = WebHelper.HashPassword(request.Password),
+                            Gender = request.Gender,
+                            Birthday = request.Birthday,
+                            Status = "A",
+                            CreateDate = DateTime.Now,
+                            CreateUserId = 0
+                        }, sqlConnection);
+
+                        if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            return RegisterResponse.ErrorResponse(errorMessage);
+                        }
+
+                        if (userId > 0)
+                        {
+                            return new RegisterResponse()
+                            {
+                                Success = true,
+                                Message = "註冊成功",
+                                UserId = userId
+                            };
+                        }
+
+                        return RegisterResponse.ErrorResponse("註冊失敗!");
+                    }
                 }
-
-                return RegisterResponse.ErrorResponse("註冊失敗!");
-
             }
             catch (Exception ex)
             {
@@ -186,19 +197,28 @@ namespace Chatman.Services
 
         public async Task<bool> IsEmailExistsAsync(string email)
         {
-            return await _userRepository.IsEmailExistsAsync(email);
+            using (SqlConnection sqlConnection = _db.CreateConnection())
+            {
+                return await _userRepository.IsEmailExistsAsync(email, sqlConnection);
+            }
         }
         #endregion
 
         #region //Get
         public async Task<UserInfo> GetUserByEmailAsync(string email)
         {
-            return await _userRepository.GetUserByEmailAsync(email);
+            using (SqlConnection sqlConnection = _db.CreateConnection())
+            {
+                return await _userRepository.GetUserByEmailAsync(email, sqlConnection);
+            }
         }
 
         public async Task<UserInfo> GetUserByIdAsync(int userId)
         {
-            return await _userRepository.GetUserByIdAsync(userId);
+            using (SqlConnection sqlConnection = _db.CreateConnection())
+            {
+                return await _userRepository.GetUserByIdAsync(userId, sqlConnection);
+            }
         }
 
         public async Task<List<GetUserByKeywordResponse>> GetUserByKeywordAsync(string keyword, int userId)
@@ -233,12 +253,18 @@ namespace Chatman.Services
 
         public async Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId)
         {
-            return await _userRepository.GetFriendsByUserIdAsync(userId);
+            using (SqlConnection sqlConnection = _db.CreateConnection())
+            {
+                return await _userRepository.GetFriendsByUserIdAsync(userId, sqlConnection);
+            }
         }
 
         public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId)
         {
-            return await _userRepository.GetUnreadNotificationsAsync(userId);
+            using (SqlConnection sqlConnection = _db.CreateConnection())
+            {
+                return await _userRepository.GetUnreadNotificationsAsync(userId, sqlConnection);
+            }
         }
         #endregion
 
@@ -264,7 +290,7 @@ namespace Chatman.Services
                     #endregion
 
                     #region //新增好友申請
-                    var requestId = await _userRepository.AddFriendRequestAsync(new FriendRequest()
+                    int? requestId = await _userRepository.AddFriendRequestAsync(new FriendRequest()
                     {
                         SenderId = request.SendId,
                         ReceiverId = request.ReceiverId,
@@ -275,10 +301,15 @@ namespace Chatman.Services
                         CreateUserId = request.SendId,
                         UpdateUserId = request.SendId
                     }, sqlConnection);
+
+                    if (requestId == null)
+                    {
+                        return ServiceResponse<bool>.ExcuteError("新增好友申請資料發生錯誤!");
+                    }
                     #endregion
 
                     #region //新增通知資料
-                    var (notificationId, errorMessage) = await _userRepository.AddNotificationAsync(new Notification()
+                    int? notificationId = await _userRepository.AddNotificationAsync(new Notification()
                     {
                         UserId = request.ReceiverId,
                         Type = "friendRequest",
@@ -293,9 +324,9 @@ namespace Chatman.Services
                         UpdateUserId = request.SendId
                     }, sqlConnection);
 
-                    if (!string.IsNullOrEmpty(errorMessage))
+                    if (notificationId == null)
                     {
-                        return ServiceResponse<bool>.ExcuteError(errorMessage);
+                        return ServiceResponse<bool>.ExcuteError("新增訊息資料發生錯誤!");
                     }
                     #endregion
 
@@ -305,7 +336,7 @@ namespace Chatman.Services
                         await _hubContext.Clients.Group(request.ReceiverId.ToString())
                             .SendAsync("ReceiveFriendRequest", new NotificationResponse()
                             {
-                                RequestId = notificationId,
+                                RequestId = (int)notificationId,
                                 SenderId = request.SendId,
                                 SenderName = request.SenderName,
                                 SenderImage = request.SenderImage,
@@ -330,7 +361,13 @@ namespace Chatman.Services
         #region //Update
         public async Task<bool> UpdateUserBioAsync(UserInfo user)
         {
-            return await _userRepository.UpdateUserBioAsync(user);
+            using TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    return await _userRepository.UpdateUserBioAsync(user, sqlConnection);
+                }
+            }
         }
         #endregion
 
