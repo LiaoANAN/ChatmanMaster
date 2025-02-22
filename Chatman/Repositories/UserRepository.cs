@@ -170,6 +170,45 @@ namespace Chatman.Repositories
                 throw;
             }
         }
+
+        public async Task<FriendRequest> GetFriendRequestByIdAsync(int friendRequestId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"SELECT a.FriendRequestId, a.SenderId, a.ReceiverId, a.Message, a.Status
+                        FROM BAS.FriendRequest a 
+                        WHERE a.FriendRequestId = @FriendRequestId";
+
+                var result = await sqlConnection.QueryFirstOrDefaultAsync<FriendRequest>(sql, new { FriendRequestId = friendRequestId });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by friendRequestId: {friendRequestId}", friendRequestId);
+                throw;
+            }
+        }
+
+        public async Task<bool> IsFriendRequestAsync(int friendRequestId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"SELECT TOP 1 1
+                        FROM BAS.FriendRequest a 
+                        WHERE a.FriendRequestId = @FriendRequestId
+                        AND a.Status != 'P'";
+
+                var result = await sqlConnection.QueryFirstOrDefaultAsync(sql, new { FriendRequestId = friendRequestId });
+
+                return result != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting user by friendRequestId: {friendRequestId}", friendRequestId);
+                throw;
+            }
+        }
         #endregion
 
         #region //Add
@@ -202,12 +241,12 @@ namespace Chatman.Repositories
             try
             {
                 sql = @"INSERT INTO BAS.Notification (
-                            UserId, Type, Message, RequestId, SenderId, IsRead, Status
+                            UserId, Type, Message, RequestId, SenderId, IsRead, Status,
                             CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         ) 
                         OUTPUT INSERTED.NotificationId 
                         VALUES (
-                            @UserId, @Type, @Message, @RequestId, @SenderId, @IsRead, @Status
+                            @UserId, @Type, @Message, @RequestId, @SenderId, @IsRead, @Status,
                             @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
                         )";
 
@@ -216,6 +255,30 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {SenderId}", notification.SenderId);
+
+                return null;
+            }
+        }
+
+        public async Task<int?> AddFriendRelationAsync(FriendRelation friendRelation, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"INSERT INTO BAS.FriendRelation (
+                            UserId, FriendId, Status,
+                            CreateDate, UpdateDate, CreateUserId, UpdateUserId
+                        ) 
+                        OUTPUT INSERTED.FriendRelationId 
+                        VALUES (
+                            @UserId, @FriendId, @Status,
+                            @CreateDate, @UpdateDate, @CreateUserId, @UpdateUserId
+                        )";
+
+                return await sqlConnection.ExecuteScalarAsync<int>(sql, friendRelation);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {UserId}", friendRelation.UserId);
 
                 return null;
             }
@@ -266,6 +329,51 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {UserId}", user.UserId);
+
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"UPDATE BAS.FriendRequest 
+                        SET Status = @Status,
+                            UpdateDate = @UpdateDate,
+                            UpdateUserId = @UpdateUserId
+                        WHERE FriendRequestId = @FriendRequestId";
+
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, request);
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {requestId}", request.FriendRequestId);
+
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateNotificationStatusAsync(Notification notification, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"UPDATE BAS.Notification 
+                        SET IsRead = @IsRead,
+                            Status = @Status,
+                            UpdateDate = @UpdateDate,
+                            UpdateUserId = @UpdateUserId
+                        WHERE NotificationId = @NotificationId";
+
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, notification);
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {NotificationId}", notification.NotificationId);
 
                 return false;
             }

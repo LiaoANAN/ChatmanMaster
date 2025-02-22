@@ -174,6 +174,8 @@ namespace Chatman.Services
                             return RegisterResponse.ErrorResponse(errorMessage);
                         }
 
+                        transactionScope.Complete();
+
                         if (userId > 0)
                         {
                             return new RegisterResponse()
@@ -365,9 +367,87 @@ namespace Chatman.Services
             {
                 using (SqlConnection sqlConnection = _db.CreateConnection())
                 {
-                    return await _userRepository.UpdateUserBioAsync(user, sqlConnection);
+                    var result = await _userRepository.UpdateUserBioAsync(user, sqlConnection);
+                    transactionScope.Complete();
+                    return result;
                 }
             }
+        }
+
+        public async Task<ServiceResponse<bool>> UpdateFriendRequestAsync(FriendRequest request)
+        {
+            using TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    FriendRequest _friendRequest = await _userRepository.GetFriendRequestByIdAsync(request.FriendRequestId, sqlConnection);
+                    if (_friendRequest == null)
+                    {
+                        return ServiceResponse<bool>.ExcuteError("好友申請需求資料錯誤!");
+                    }
+
+                    if (await _userRepository.IsFriendRequestAsync(_friendRequest.FriendRequestId, sqlConnection))
+                    {
+                        return ServiceResponse<bool>.ExcuteError("此好友申請需求已處理!");
+                    }
+
+                    if (await _userRepository.CheckFriendStatusAsync(_friendRequest.SenderId, _friendRequest.ReceiverId, sqlConnection))
+                    {
+                        return ServiceResponse<bool>.ExcuteError("與此用戶已是好友關係!");
+                    }
+
+                    if (!await _userRepository.UpdateFriendRequestAsync(request, sqlConnection))
+                    {
+                        return ServiceResponse<bool>.ExcuteError("處理好友申請需求時錯誤!");
+                    }
+
+                    if (request.Status == "A")
+                    {
+                        #region //新增好友關係名單
+                        FriendRelation friendRelation = new FriendRelation()
+                        {
+                            UserId = _friendRequest.SenderId,
+                            FriendId = _friendRequest.ReceiverId,
+                            Status = "A",
+                            CreateDate = DateTime.Now,
+                            UpdateDate = DateTime.Now,
+                            CreateUserId = _friendRequest.SenderId,
+                            UpdateUserId = _friendRequest.SenderId
+                        };
+
+                        if (await _userRepository.AddFriendRelationAsync(friendRelation, sqlConnection) == null)
+                        {
+                            return ServiceResponse<bool>.ExcuteError("新增好友時錯誤!");
+                        }
+
+                        friendRelation.UserId = _friendRequest.ReceiverId;
+                        friendRelation.FriendId = _friendRequest.SenderId;
+                        if (await _userRepository.AddFriendRelationAsync(friendRelation, sqlConnection) == null)
+                        {
+                            return ServiceResponse<bool>.ExcuteError("新增好友時錯誤!");
+                        }
+                        #endregion
+                    }
+                }
+                transactionScope.Complete();
+            }
+            return ServiceResponse<bool>.ExcuteSuccess();
+        }
+
+        public async Task<ServiceResponse<bool>> UpdateNotificationStatusAsync(Notification notification)
+        {
+            using TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    if (!await _userRepository.UpdateNotificationStatusAsync(notification, sqlConnection))
+                    {
+                        return ServiceResponse<bool>.ExcuteError("更改通知訊息時錯誤!");
+                    }
+                }
+                transactionScope.Complete();
+            }
+            return ServiceResponse<bool>.ExcuteSuccess();
         }
         #endregion
 

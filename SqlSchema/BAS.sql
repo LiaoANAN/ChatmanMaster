@@ -21,7 +21,7 @@ CREATE TABLE BAS.FriendRelation (
     FriendRelationId     int             IDENTITY,
     UserId              int             NOT NULL,                         -- 用戶ID
     FriendId            int             NOT NULL,                         -- 好友ID
-    Status              nvarchar(1)     NOT NULL,                         -- 狀態(P:待處理, A:已接受, R:已拒絕, B:已封鎖)
+    Status              nvarchar(1)     NOT NULL,                         -- 狀態(A:啟用中, B:已封鎖)
     CreateDate          datetime        NOT NULL    DEFAULT GETDATE(),    -- 新增日期
     UpdateDate          datetime            NULL,                         -- 修改日期
     CreateUserId        int             NOT NULL,                         -- 新增人員
@@ -107,7 +107,7 @@ CREATE TABLE BAS.Notification (
     RequestId          int                 NULL,                         -- 關聯的請求ID
     SenderId           int                 NULL,                         -- 發送者ID
     IsRead             bit             NOT NULL    DEFAULT 0,            -- 是否已讀
-    Status             nvarchar(1)     NOT NULL,                         -- 狀態(A:活動, D:刪除)
+    Status             nvarchar(1)     NOT NULL,                         -- 狀態(A:活動, P:已處理, V:刪除)
     CreateDate         datetime        NOT NULL    DEFAULT GETDATE(),    -- 建立日期
     UpdateDate         datetime            NULL,                         -- 更新日期
     CreateUserId       int             NOT NULL,                         -- 新增人員

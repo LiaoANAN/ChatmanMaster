@@ -409,7 +409,7 @@
                 const newBio = $('.bio-input').val().trim();
                 try {
                     const response = await $.ajax({
-                        url: '/api/user/updateUserBio',
+                        url: '../api/user/updateUserBio',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({ bio: newBio })
@@ -747,7 +747,7 @@
             async function searchUsers(keyword) {
                 try {
                     const response = await $.ajax({
-                        url: `api/user/getUser?keyword=${encodeURIComponent(keyword)}`,
+                        url: `../api/user/getUser?keyword=${encodeURIComponent(keyword)}`,
                         type: 'GET',
                         dataType: 'json'
                     });
@@ -806,7 +806,7 @@
                 const receiverId = $(this).data('id');
                 try {
                     const response = await $.ajax({
-                        url: '/api/user/sendFriendRequest',
+                        url: '../api/user/sendFriendRequest',
                         method: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({
@@ -840,11 +840,9 @@
         async function loadUnreadNotifications() {
             try {
                 const response = await $.ajax({
-                    url: '/api/user/getUnreadNotifications',
+                    url: '../api/user/getUnreadNotifications',
                     type: 'GET'
                 });
-
-                console.log(response);
 
                 if (response.success) {
                     response.data.forEach(notification => {
@@ -873,7 +871,7 @@
 
             if (notification.type === 'friendRequest') {
                 notificationHtml = `
-                    <div class="notification-item friend-request" data-id="${notification.id}">
+                    <div class="notification-item friend-request" data-notification-id="${notification.notificationId}">
                         <div class="notification-content">
                             <div class="user-info">
                                 <img src="${notification.senderImage}"
@@ -886,10 +884,10 @@
                             </div>
                             <p class="message">${notification.message || '希望能加你為好友'}</p>
                             <div class="notification-actions">
-                                <button class="accept-btn" onclick="handleFriendRequest(${notification.requestId}, 'accept')">
+                                <button class="accept-btn" onclick="handleFriendRequest(${notification.requestId}, 'A', ${notification.notificationId})">
                                     接受
                                 </button>
-                                        <button class="reject-btn" onclick="handleFriendRequest(${notification.requestId}, 'reject')">
+                                <button class="reject-btn" onclick="handleFriendRequest(${notification.requestId}, 'R', ${notification.notificationId})">
                                     拒絕
                                 </button>
                             </div>
@@ -907,38 +905,64 @@
         }
 
         // 處理好友請求
-        async function handleFriendRequest(requestId, action) {
+        async function handleFriendRequest(requestId, action, notificationId) {
             try {
                 const response = await $.ajax({
-                    url: '/api/user/handleFriendRequest',
+                    url: '../api/user/handleFriendRequest',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
-                        requestId: requestId,
-                        action: action
+                        friendRequestId: requestId,
+                        status: action
                     })
                 });
 
                 if (response.success) {
-                    // 移除通知項目
-                    $(`.notification-item[data-id="${requestId}"]`).slideUp(300, function () {
+                    updateNotificationStatus(notificationId, "P", true);
+
+                    const $notificationItem = $(`.notification-item[data-notification-id="${notificationId}"]`);
+
+                    $notificationItem.addClass('handled');
+
+                    $notificationItem.fadeOut(300, function () {
                         $(this).remove();
+
                         updateNotificationCount();
 
-                        // 如果是接受請求，重新載入好友列表
-                        if (action === 'accept') {
+                        if (action === 'A') {
                             loadFriendsList();
                         }
 
-                        // 如果沒有通知了，顯示空狀態
-                        if ($('.notification-item').length === 0) {
-                            showEmptyState();
-                        }
+                        checkEmptyNotifications();
                     });
                 }
             } catch (error) {
-                console.error('處理好友請求失敗:', error);
-                alert('處理失敗，請稍後再試');
+                errorAlert("處理好友申請錯誤!", error.responseJSON?.message, 1500);
+            }
+        }
+
+        async function updateNotificationStatus(notificationId, status, isRead) {
+            try {
+                await $.ajax({
+                    url: '../api/user/updateNotificationStatus',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        NotificationId: notificationId,
+                        Status: status,
+                        IsRead: isRead
+                    })
+                });
+            } catch (error) {
+                errorAlert("更新通知狀態錯誤!", error.responseJSON?.message, 1500);
+            }
+        }
+
+        // 檢查通知列表是否為空
+        function checkEmptyNotifications() {
+            const $notificationMenu = $('.notification-menu .menu-content');
+            if ($('.notification-item:not(.handled)').length === 0) {
+                showEmptyState();
             }
         }
 
@@ -976,7 +1000,7 @@
         async function markAllNotificationsAsRead() {
             try {
                 const response = await $.ajax({
-                    url: '/api/user/markAllNotificationsAsRead',
+                    url: '../api/user/markAllNotificationsAsRead',
                     type: 'POST'
                 });
 

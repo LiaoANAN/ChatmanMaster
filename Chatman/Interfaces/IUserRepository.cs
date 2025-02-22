@@ -14,16 +14,21 @@ namespace Chatman.Interfaces
         Task<bool> CheckFriendStatusAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<bool> CheckFriendRequestAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<List<Notification>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection);
+        Task<FriendRequest> GetFriendRequestByIdAsync(int friendRequestId, SqlConnection sqlConnection);
+        Task<bool> IsFriendRequestAsync(int friendRequestId, SqlConnection sqlConnection);
         #endregion
 
         #region //Add
         Task<int?> AddFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
         Task<int?> AddNotificationAsync(Notification notification, SqlConnection sqlConnection);
+        Task<int?> AddFriendRelationAsync(FriendRelation friendRelation, SqlConnection sqlConnection);
         #endregion
 
         #region //Update
         Task<bool> UpdateUserAsync(UserInfo user, SqlConnection sqlConnection);
         Task<bool> UpdateUserBioAsync(UserInfo user, SqlConnection sqlConnection);
+        Task<bool> UpdateFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
+        Task<bool> UpdateNotificationStatusAsync(Notification notification, SqlConnection sqlConnection);
         #endregion
 
         #region //Delete

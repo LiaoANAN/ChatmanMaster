@@ -220,6 +220,63 @@ namespace Chatman.Controllers
                 return StatusCode(500, new { message = "內部伺服器錯誤" });
             }
         }
+
+        [HttpPost("api/user/handleFriendRequest")]
+        public async Task<IActionResult> UpdateFriendRequest([FromBody] FriendRequest request)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                request.UpdateDate = DateTime.Now;
+                request.UpdateUserId = user.UserId;
+                var response = await _userService.UpdateFriendRequestAsync(request);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Register failed");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
+
+        [HttpPost("api/user/updateNotificationStatus")]
+        public async Task<IActionResult> UpdateNotificationStatus([FromBody] Notification notification)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                notification.UpdateDate = DateTime.Now;
+                notification.UpdateUserId = user.UserId;
+
+                var response = await _userService.UpdateNotificationStatusAsync(notification);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Register failed");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
         #endregion
 
         #region //Delete
