@@ -23,7 +23,7 @@
 
 <h3>前端 (Frontend)</h3>
 <ul>
-    <li>Vue.js 3 + Vite</li>
+    <li>JQuery</li>
     <li>Tailwind CSS</li>
     <li>Axios (API 請求)</li>
     <li>WebSocket (即時通訊)</li>
@@ -34,7 +34,7 @@
     <li>.NET Core 8 (C#)</li>
     <li>ASP.NET Web API</li>
     <li>SignalR (即時 WebSocket 連線)</li>
-    <li>Entity Framework Core + SQL Server</li>
+    <li>SQL Server</li>
     <li>Dapper (高效 SQL 查詢)</li>
     <li>Redis (快取與即時通知)</li>
 </ul>
