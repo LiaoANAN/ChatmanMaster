@@ -21,11 +21,13 @@ builder.Services.AddSignalR();
 // 直接註冊資料庫連接服務
 builder.Services.AddSingleton<IDatabaseConnection, DatabaseConnection>();
 
-// Add repositories
+// Add User Function
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
-// 註冊 UserService
 builder.Services.AddScoped<IUserService, UserService>();
+
+// Add Chat Function
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
 
 // 添加認證服務
 builder.Services.AddAuthentication(options =>

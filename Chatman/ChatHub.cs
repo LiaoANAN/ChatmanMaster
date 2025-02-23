@@ -1,16 +1,23 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using Chatman.Models;
+using Chatman.Models.DTOs;
+using Chatman.Interfaces;
+using NuGet.Protocol.Plugins;
 
 public class ChatHub : Hub
 {
     // 用於存儲用戶ID和連接ID的映射關係
     private static readonly ConcurrentDictionary<int, HashSet<string>> _userConnections = new();
     private readonly ILogger<ChatHub> _logger;
+    private readonly IChatService _chatService;
+    private readonly IUserService _userService;
 
-    public ChatHub(ILogger<ChatHub> logger)
+    public ChatHub(ILogger<ChatHub> logger, IChatService chatService, IUserService userService)
     {
         _logger = logger;
+        _chatService = chatService;
+        _userService = userService;
     }
 
     // 用戶註冊/登入時調用
@@ -147,6 +154,52 @@ public class ChatHub : Hub
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error sending friend request response to {userId}");
+            throw;
+        }
+    }
+
+    //傳送訊息
+    public async Task SendMessage(SendMessageRequest request)
+    {
+        try
+        {
+            // 儲存訊息到資料庫
+            var messageId = await _chatService.SaveMessageAsync(new ChatMessage
+            {
+                SenderId = request.SenderId,
+                ReceiverId = request.ReceiverId,
+                MessageContent = request.MessageContent,
+                MessageType = request.MessageType,
+                Status = "A",
+                CreateDate = DateTime.Now,
+                CreateUserId = request.SenderId
+            });
+
+            //取得寄送訊息者的資料
+            var sender = await _userService.GetUserByIdAsync(request.SenderId);
+
+            // 建立回應物件
+            var response = new MessageResponse
+            {
+                MessageId = messageId,
+                SenderId = sender.UserId,
+                SenderName = sender.UserName,
+                SenderAvatar = sender.UserImage,
+                MessageContent = request.MessageContent,
+                MessageType = request.MessageType,
+                CreateDate = DateTime.Now
+            };
+
+            // 發送給接收者
+            await Clients.User(request.ReceiverId.ToString())
+                        .SendAsync("ReceiveMessage", response);
+
+            // 發送回發送者（確認訊息已送達）
+            await Clients.Caller.SendAsync("MessageSent", response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending message");
             throw;
         }
     }

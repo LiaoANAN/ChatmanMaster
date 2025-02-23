@@ -1,0 +1,312 @@
+﻿<link rel="stylesheet" href="~/css/chat_room.min.css" />
+
+<!-- 聊天室區域 -->
+<div class="chat-room hidden" id="chat-room">
+    <!-- 聊天室標題 -->
+    <div class="chat-header">
+        <div class="chat-user-info">
+            <img src="" alt="User avatar" class="chat-user-avatar">
+            <div class="chat-user-details">
+                <h3 class="chat-user-name"></h3>
+                <span class="chat-user-status"></span>
+            </div>
+        </div>
+        <div class="chat-actions">
+            <button class="chat-action-btn" title="清除聊天記錄2">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button class="chat-action-btn" title="顯示更多操作">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 聊天記錄區域 -->
+    <div class="messages-container">
+        <div class="messages-list" id="messages-list">
+            <!-- 訊息列表會動態插入這裡 -->
+        </div>
+
+        <!-- 載入更多按鈕 -->
+        <div class="load-more-indicator hidden">
+            <div class="spinner"></div>
+            <span>載入更多訊息...</span>
+        </div>
+    </div>
+
+    <!-- 檔案預覽區域 -->
+    <div id="filePreview" class="file-preview hidden">
+        <div class="preview-content">
+            <img src="" alt="preview" id="previewImage">
+            <div class="preview-actions">
+                <button class="preview-action-btn" id="removePreview">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 輸入區域 -->
+    <div class="input-area">
+        <div class="input-container">
+            <button class="input-action-btn" id="btnAttachment" title="附加檔案">
+                <i class="fas fa-paperclip"></i>
+            </button>
+            <input type="file" id="fileInput" class="hidden" accept="image/*">
+
+            <textarea id="messageInput"
+                      placeholder="輸入訊息..."
+                      rows="1"
+                      data-max-rows="5"></textarea>
+
+            <button class="input-action-btn" id="btnSend" title="發送訊息">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 訊息模板 -->
+<template id="message-template">
+    <div class="message">
+        <div class="message-content">
+            <div class="message-text"></div>
+            <div class="message-info">
+                <span class="message-time"></span>
+                <span class="message-status"></span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- 圖片訊息模板 -->
+<template id="image-message-template">
+    <div class="message">
+        <div class="message-content">
+            <div class="message-image">
+                <img src="" alt="image message" loading="lazy">
+            </div>
+            <div class="message-info">
+                <span class="message-time"></span>
+                <span class="message-status"></span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    function initializeChatRoom() {
+        // 檢查元素是否存在
+        const $messageInput = $('#messageInput');
+        if ($messageInput.length === 0) {
+            return;
+        }
+        const $btnSend = $('#btnSend');
+        const $messagesList = $('#messages-list');
+        const $messagesContainer = $('.messages-container');
+
+        // 初始化變數
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreMessages = true;
+        let currentFriendId = null;
+
+        // 自動調整高度
+        function adjustTextareaHeight() {
+            const element = $messageInput[0];
+            element.style.height = 'auto';
+            const maxHeight = 100;
+            element.style.height = Math.min(element.scrollHeight, maxHeight) + 'px';
+        }
+
+        // 發送訊息
+        function sendMessage() {
+            const content = $messageInput.val().trim();
+            if (!content) {
+                return;
+            }
+            const selectedFriend = $('.friend-item.selected');
+            const friendId = selectedFriend.data('id');
+            // 新增訊息到聊天 UI
+            const messageHtml = `
+                <div class="message sent">
+                    <div class="message-content">
+                        <div class="message-text">${content}</div>
+                        <div class="message-info">
+                            <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="message-status"><i class="fas fa-check"></i></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $messagesList.append(messageHtml);
+            // 清空輸入框並重置高度
+            $messageInput.val('').css('height', 'auto');
+            // 滾動到底部
+            $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
+        }
+
+        // 載入聊天記錄
+        async function loadChatHistory(friendId) {
+            if (isLoading) return;
+
+            currentFriendId = friendId;
+            currentPage = 1;
+            hasMoreMessages = true;
+            isLoading = true;
+
+            try {
+                const response = await $.ajax({
+                    url: `/api/chat/history/${friendId}`,
+                    method: 'GET',
+                    data: {
+                        page: currentPage,
+                        pageSize: 20
+                    }
+                });
+
+                if (response.success) {
+                    $messagesList.empty();
+                    renderMessages(response.data);
+
+                    if (response.data.length < 20) {
+                        hasMoreMessages = false;
+                    }
+                }
+            } catch (error) {
+                console.error('載入聊天記錄失敗:', error);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // 載入更多訊息
+        async function loadMoreMessages() {
+            if (isLoading || !hasMoreMessages) return;
+
+            isLoading = true;
+            currentPage += 1;
+
+            try {
+                const response = await $.ajax({
+                    url: `/api/chat/history/${currentFriendId}`,
+                    method: 'GET',
+                    data: {
+                        page: currentPage,
+                        pageSize: 20
+                    }
+                });
+
+                if (response.success) {
+                    if (response.data.length > 0) {
+                        const scrollHeight = $messagesList[0].scrollHeight;
+
+                        // 在最上方插入訊息
+                        renderMessages(response.data, true);
+
+                        // 保持滾動位置
+                        const newScrollHeight = $messagesList[0].scrollHeight;
+                        $messagesContainer.scrollTop(newScrollHeight - scrollHeight);
+                    }
+
+                    if (response.data.length < 20) {
+                        hasMoreMessages = false;
+                    }
+                }
+            } catch (error) {
+                console.error('載入更多訊息失敗:', error);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // 渲染訊息
+        function renderMessages(messages, prepend = false) {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+            const currentUserId = userInfo.userId;
+
+            const messagesHtml = messages.map(message => {
+                const isSent = message.senderId === currentUserId;
+                return `
+                    <div class="message ${isSent ? 'sent' : 'received'}">
+                        <div class="message-content">
+                            <div class="message-text">${message.messageContent}</div>
+                            <div class="message-info">
+                                <span class="message-time">${formatTime(new Date(message.createDate))}</span>
+                                <span class="message-status"><i class="fas fa-check"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (prepend) {
+                $messagesList.prepend(messagesHtml);
+            } else {
+                $messagesList.append(messagesHtml);
+                $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
+            }
+        }
+
+        function formatTime(date) {
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `下午 ${hours}:${minutes}`;
+        }
+
+        // 直接使用 jQuery 的 on 方法綁定事件
+        $messageInput.on('input', function (e) {
+            adjustTextareaHeight();
+        });
+
+        $messageInput.on('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+                return false;
+            }
+        });
+
+        $btnSend.on('click', function (e) {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // 添加滾動事件監聽
+        $messagesContainer.on('scroll', function () {
+            if ($messagesContainer.scrollTop() <= 50 && !isLoading && hasMoreMessages) {
+                loadMoreMessages();
+            }
+        });
+
+        // 暴露給外部使用的方法
+        window.chatRoomFunctions = {
+            loadChatHistory: loadChatHistory
+        };
+    }
+
+    // 修改 openChatRoom 函數
+    function openChatRoom(friendElement) {
+        const friendId = friendElement.data('id');
+        const friendName = friendElement.find('.friend-name').text();
+        const friendAvatar = friendElement.find('img').attr('src');
+        const isOnline = friendElement.find('.status-dot').hasClass('online');
+
+        // 更新聊天室信息
+        $('.chat-user-name').text(friendName);
+        $('.chat-user-avatar').attr('src', friendAvatar);
+        $('.chat-user-status').text(isOnline ? '在線' : '離線');
+
+        // 隱藏歡迎訊息，顯示聊天室
+        $('#welcome-message').addClass('hidden');
+        $('#chat-room').removeClass('hidden');
+
+        // 載入聊天記錄
+        window.chatRoomFunctions.loadChatHistory(friendId);
+
+        // 在移動設備上，隱藏側邊欄
+        if (window.innerWidth <= 768) {
+            $('.sidebar').removeClass('active');
+        }
+    }
+</script>

@@ -3,7 +3,6 @@
 }
 
 <link rel="stylesheet" href="~/css/index.min.css" />
-<link rel="stylesheet" href="~/css/chat_room.min.css" />
 
 <style>
 </style>
@@ -34,7 +33,7 @@
         <!-- Search Bar -->
         <div class="search-container">
             <i class="fas fa-search"></i>
-            <input type="text" placeholder="搜尋...">
+            <input id="txtFriendNameQ" type="text" placeholder="搜尋...">
         </div>
 
         <!-- Navigation Tabs -->
@@ -199,50 +198,8 @@
             <p>選擇一個聊天或開始新的對話</p>
         </div>
 
-        <!-- 聊天室區域 -->
-        <div class="chat-room hidden" id="chat-room">
-            <!-- 聊天室標題 -->
-            <div class="chat-header">
-                <div class="chat-user-info">
-                    <img src="" alt="User avatar" class="chat-user-avatar">
-                    <div class="chat-user-details">
-                        <h3 class="chat-user-name"></h3>
-                        <span class="chat-user-status"></span>
-                    </div>
-                </div>
-                <div class="chat-actions">
-                    <button class="chat-action-btn">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                    <button class="chat-action-btn">
-                        <i class="fas fa-video"></i>
-                    </button>
-                    <button class="chat-action-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 聊天記錄區域 -->
-            <div class="messages-container">
-                <div class="messages-list">
-                    <!-- 消息會動態插入這裡 -->
-                </div>
-            </div>
-
-            <!-- 輸入區域 -->
-            <div class="input-area">
-                <div class="input-container">
-                    <button class="input-action-btn">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <input type="text" id="messageInput" placeholder="輸入訊息...">
-                    <button class="input-action-btn">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- 引入聊天室部分視圖 -->
+        @await Html.PartialAsync("~/Views/Chat/ChatRoom.cshtml")
     </div>
 </div>
 
@@ -275,6 +232,9 @@
 
             //初始化通知功能
             initializeNotifications();
+
+            //初始化聊天室功能
+            initializeChatRoom();
         });
 
         function initializeChat() {
@@ -490,9 +450,9 @@
 
             onlineFriends.forEach(friend => {
                 onlineHtml += `
-                    <div class="friend-item" data-id="${friend.friendId}">
+                    <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName}">
                         <div class="friend-avatar-container">
-                            <img src="${friend.userImage || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <img src="${friend.userImage}" alt="${friend.userName}">
                             <span class="status-dot online"></span>
                         </div>
                         <span class="friend-name">${friend.userName}</span>
@@ -502,9 +462,9 @@
 
             offlineFriends.forEach(friend => {
                 offlineHtml += `
-                    <div class="friend-item" data-id="${friend.friendId}">
+                     <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName.toLowerCase()}">
                         <div class="friend-avatar-container">
-                            <img src="${friend.userImage || '/images/default-avatar.png'}" alt="${friend.userName}">
+                            <img src="${friend.userImage}" alt="${friend.userName}">
                             <span class="status-dot offline"></span>
                         </div>
                         <span class="friend-name">${friend.userName}</span>
@@ -526,6 +486,48 @@
                     ${offlineHtml}
                 `).fadeIn(200);
             });
+
+            // 搜尋功能的實作
+            $('.search-container input').on('input', function () {
+                // 取得搜尋文字並轉為小寫
+                const searchTerm = $(this).val().toLowerCase().trim();
+
+                // 如果搜尋框是空的，顯示所有好友
+                if (searchTerm === '') {
+                    $('.friend-item').show();
+                    updateFriendsCounts();
+                    return;
+                }
+
+                // 根據搜尋條件顯示或隱藏好友
+                $('.friend-item').each(function () {
+                    const friendName = $(this).data('name');
+                    if (friendName.includes(searchTerm)) {
+                        $(this).show(); // 名字符合搜尋條件的顯示
+                    } else {
+                        $(this).hide(); // 不符合的隱藏
+                    }
+                });
+
+                // 更新好友數量顯示
+                updateFriendsCounts(true);
+            });
+
+            function updateFriendsCounts(isFiltered = false) {
+                // 計算在線好友數量（根據是否正在篩選來決定只計算可見的還是全部）
+                const onlineCount = isFiltered
+                    ? $('#friends-list .list-group:eq(0) .friend-item:visible').length
+                    : $('#friends-list .list-group:eq(0) .friend-item').length;
+
+                // 計算離線好友數量
+                const offlineCount = isFiltered
+                    ? $('#friends-list .list-group:eq(1) .friend-item:visible').length
+                    : $('#friends-list .list-group:eq(1) .friend-item').length;
+
+                // 更新顯示的數量
+                $('#friends-list .list-group:eq(0) h4').text(`線上好友 (${onlineCount})`);
+                $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
+            }
         }
 
         // 開啟聊天室
@@ -687,37 +689,6 @@
                     $(this).remove();
                 });
             }, 3000);
-        }
-
-        // 發送訊息
-        function sendMessage() {
-            const message = $('#messageInput').val().trim();
-            if (message) {
-                const selectedFriend = $('.friend-item.selected');
-                const friendId = selectedFriend.data('id');
-
-                // TODO: 實作發送訊息的 API 調用
-
-                // 暫時性的本地渲染
-                const messageHtml = `
-                    <div class="message sent">
-                        <div class="message-content">${message}</div>
-                    </div>
-                `;
-                $('.messages-list').append(messageHtml);
-                $('#messageInput').val('');
-
-                // 滾動到底部
-                $('.messages-container').scrollTop($('.messages-container')[0].scrollHeight);
-            }
-
-            // 註冊發送訊息的事件處理
-            $('.input-action-btn i.fa-paper-plane').parent().click(sendMessage);
-            $('#messageInput').keypress(function (e) {
-                if (e.which == 13) {
-                    sendMessage();
-                }
-            });
         }
 
         //初始化新增好友功能
