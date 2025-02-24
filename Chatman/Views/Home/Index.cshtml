@@ -642,10 +642,11 @@
 
                 // 添加通知到選單
                 addNotificationToMenu({
-                    id: notification.requestId,
+                    notificationId: notification.notificationId,
+                    requestId: notification.requestId,
                     type: 'friendRequest',
                     senderName: notification.senderName,
-                    senderAvatar: notification.senderAvatar || 'default-avatar-url',
+                    senderImage: notification.senderImage || 'default-avatar-url',
                     message: notification.message,
                     createTime: notification.createTime
                 });
@@ -655,6 +656,12 @@
 
                 // 可選：顯示 toast 通知
                 showToastNotification(`收到來自 ${notification.senderName} 的好友請求`);
+            });
+
+            // 更新好友列表
+            connection.on("UpdateFriendList", () => {
+                // 重新加载好友列表
+                loadFriendsList();
             });
 
             // 更新好友計數的輔助函數
@@ -828,6 +835,7 @@
 
         // 添加通知到選單
         function addNotificationToMenu(notification) {
+            console.log("addNotificationToMenu:", notification);
             const $notificationMenu = $('.notification-menu .menu-content');
 
             // 如果是空狀態，先清除
@@ -900,9 +908,9 @@
 
                         updateNotificationCount();
 
-                        if (action === 'A') {
-                            loadFriendsList();
-                        }
+                        // if (action === 'A') {
+                        //     loadFriendsList();
+                        // }
 
                         checkEmptyNotifications();
                     });

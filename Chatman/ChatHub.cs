@@ -203,4 +203,20 @@ public class ChatHub : Hub
             throw;
         }
     }
+
+    // 通知用戶更新好友列表
+    public async Task NotifyFriendListUpdate(int userId)
+    {
+        try
+        {
+            // 通知指定用户更新好友列表
+            await Clients.Group(userId.ToString()).SendAsync("UpdateFriendList");
+            _logger.LogInformation($"Friend list update notification sent to user {userId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error sending friend list update notification to user {userId}");
+            throw;
+        }
+    }
 }

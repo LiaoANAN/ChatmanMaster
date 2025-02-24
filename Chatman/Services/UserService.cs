@@ -292,7 +292,7 @@ namespace Chatman.Services
                     #endregion
 
                     #region //新增好友申請
-                    int? requestId = await _userRepository.AddFriendRequestAsync(new FriendRequest()
+                    int? friendRequestId = await _userRepository.AddFriendRequestAsync(new FriendRequest()
                     {
                         SenderId = request.SendId,
                         ReceiverId = request.ReceiverId,
@@ -304,7 +304,7 @@ namespace Chatman.Services
                         UpdateUserId = request.SendId
                     }, sqlConnection);
 
-                    if (requestId == null)
+                    if (friendRequestId == null)
                     {
                         return ServiceResponse<bool>.ExcuteError("新增好友申請資料發生錯誤!");
                     }
@@ -316,7 +316,7 @@ namespace Chatman.Services
                         UserId = request.ReceiverId,
                         Type = "friendRequest",
                         Message = request.Message,
-                        RequestId = requestId,
+                        RequestId = friendRequestId,
                         SenderId = request.SendId,
                         IsRead = false,
                         Status = "A",
@@ -338,7 +338,8 @@ namespace Chatman.Services
                         await _hubContext.Clients.Group(request.ReceiverId.ToString())
                             .SendAsync("ReceiveFriendRequest", new NotificationResponse()
                             {
-                                RequestId = (int)notificationId,
+                                NotificationId = (int)notificationId,
+                                RequestId = (int)friendRequestId,
                                 SenderId = request.SendId,
                                 SenderName = request.SenderName,
                                 SenderImage = request.SenderImage,
@@ -427,6 +428,13 @@ namespace Chatman.Services
                             return ServiceResponse<bool>.ExcuteError("新增好友時錯誤!");
                         }
                         #endregion
+
+                        //更新雙方好友列表
+                        await _hubContext.Clients.Group(friendRelation.UserId.ToString())
+                            .SendAsync("UpdateFriendList");
+
+                        await _hubContext.Clients.Group(friendRelation.FriendId.ToString())
+                            .SendAsync("UpdateFriendList");
                     }
                 }
                 transactionScope.Complete();
