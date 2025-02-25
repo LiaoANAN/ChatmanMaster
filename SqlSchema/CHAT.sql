@@ -11,7 +11,7 @@ CREATE TABLE CHAT.Message (
     Content           NVARCHAR(MAX)   NOT NULL,                      -- 訊息內容
     MediaUrl          NVARCHAR(500)       NULL,                      -- 媒體文件URL
     IsRead            BIT             NOT NULL DEFAULT 0,            -- 是否已讀
-    IsDeleted         BIT             NOT NULL DEFAULT 0,            -- 是否已刪除
+    IsDelete          BIT             NOT NULL DEFAULT 0,            -- 是否已刪除
     Status            NVARCHAR(1)     NOT NULL,                      -- 狀態(A:正常)
     CreateDate        DATETIME        NOT NULL DEFAULT GETDATE(),    -- 發送時間
     CONSTRAINT PK_Message PRIMARY KEY (MessageId),

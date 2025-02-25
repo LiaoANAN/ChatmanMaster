@@ -12,10 +12,10 @@
             </div>
         </div>
         <div class="chat-actions">
-            <button class="chat-action-btn" title="清除聊天記錄2">
+            <button class="chat-action-btn" title="清除聊天記錄" id="btnClearChat">
                 <i class="fas fa-trash"></i>
             </button>
-            <button class="chat-action-btn" title="顯示更多操作">
+            <button class="chat-action-btn" title="顯示更多操作" id="btnMoreOptions">
                 <i class="fas fa-ellipsis-v"></i>
             </button>
         </div>
@@ -28,9 +28,10 @@
         </div>
 
         <!-- 載入更多按鈕 -->
-        <div class="load-more-indicator hidden">
-            <div class="spinner"></div>
-            <span>載入更多訊息...</span>
+        <div class="load-more hidden">
+            <button id="btnLoadMore" class="load-more-btn">
+                載入更多訊息
+            </button>
         </div>
     </div>
 
@@ -66,9 +67,25 @@
     </div>
 </div>
 
-<!-- 訊息模板 -->
+<!-- 更多操作選單 -->
+<div class="chat-more-options hidden" id="moreOptionsMenu">
+    <div class="option-item" id="blockUserOption">
+        <i class="fas fa-ban"></i>
+        <span>封鎖用戶</span>
+    </div>
+    <div class="option-item" id="reportUserOption">
+        <i class="fas fa-flag"></i>
+        <span>檢舉用戶</span>
+    </div>
+    <div class="option-item" id="removeFriendOption">
+        <i class="fas fa-user-times"></i>
+        <span>移除好友</span>
+    </div>
+</div>
+
+<!-- 文字訊息模板 -->
 <template id="message-template">
-    <div class="message">
+    <div class="message" data-message-id="">
         <div class="message-content">
             <div class="message-text"></div>
             <div class="message-info">
@@ -81,7 +98,7 @@
 
 <!-- 圖片訊息模板 -->
 <template id="image-message-template">
-    <div class="message">
+    <div class="message" data-message-id="">
         <div class="message-content">
             <div class="message-image">
                 <img src="" alt="image message" loading="lazy">
@@ -96,6 +113,45 @@
 
 <script>
     function initializeChatRoom() {
+        // 監聽接收訊息事件
+        connection.on("ReceiveMessage", function (message) {
+            // 檢查當前是否正在與發送者聊天
+            const currentChatId = $('.friend-item.selected').data('id');
+            if (currentChatId && currentChatId === message.senderId) {
+                // 如果是，直接添加訊息到聊天視窗
+                addMessageToChat(message, false);
+
+                // 將訊息標記為已讀
+                markMessagesAsRead(message.senderId);
+            } else {
+                // 如果不是，更新好友列表中的未讀訊息計數
+                updateUnreadMessageCount(message.senderId);
+
+                // 顯示 toast 通知
+                showToastNotification(`收到來自 ${message.senderName} 的新訊息`);
+            }
+        });
+
+        // 監聽訊息發送成功事件
+        connection.on("MessageSent", function (message) {
+            // 更新 UI 中的訊息狀態
+            updateMessageStatus(message.messageId, true);
+        });
+
+        // 註冊發送訊息的事件處理
+        $('#btnSend').click(sendMessage);
+        $('#messageInput').keypress(function (e) {
+            if (e.which == 13 && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 註冊附件按鈕點擊事件
+        $('#btnAttachment').click(function() {
+            $('#fileInput').click();
+        });
+
         // 檢查元素是否存在
         const $messageInput = $('#messageInput');
         if ($messageInput.length === 0) {
@@ -117,67 +173,6 @@
             element.style.height = 'auto';
             const maxHeight = 100;
             element.style.height = Math.min(element.scrollHeight, maxHeight) + 'px';
-        }
-
-        // 發送訊息
-        function sendMessage() {
-            const content = $messageInput.val().trim();
-            if (!content) {
-                return;
-            }
-            const selectedFriend = $('.friend-item.selected');
-            const friendId = selectedFriend.data('id');
-            // 新增訊息到聊天 UI
-            const messageHtml = `
-                <div class="message sent">
-                    <div class="message-content">
-                        <div class="message-text">${content}</div>
-                        <div class="message-info">
-                            <span class="message-time">${new Date().toLocaleTimeString()}</span>
-                            <span class="message-status"><i class="fas fa-check"></i></span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            $messagesList.append(messageHtml);
-            // 清空輸入框並重置高度
-            $messageInput.val('').css('height', 'auto');
-            // 滾動到底部
-            $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
-        }
-
-        // 載入聊天記錄
-        async function loadChatHistory(friendId) {
-            if (isLoading) return;
-
-            currentFriendId = friendId;
-            currentPage = 1;
-            hasMoreMessages = true;
-            isLoading = true;
-
-            try {
-                const response = await $.ajax({
-                    url: `/api/chat/history/${friendId}`,
-                    method: 'GET',
-                    data: {
-                        page: currentPage,
-                        pageSize: 20
-                    }
-                });
-
-                if (response.success) {
-                    $messagesList.empty();
-                    renderMessages(response.data);
-
-                    if (response.data.length < 20) {
-                        hasMoreMessages = false;
-                    }
-                }
-            } catch (error) {
-                console.error('載入聊天記錄失敗:', error);
-            } finally {
-                isLoading = false;
-            }
         }
 
         // 載入更多訊息
@@ -307,6 +302,326 @@
         // 在移動設備上，隱藏側邊欄
         if (window.innerWidth <= 768) {
             $('.sidebar').removeClass('active');
+        }
+    }
+
+    // 傳送訊息
+    function sendMessage() {
+        const messageInput = $('#messageInput');
+        const message = messageInput.val().trim();
+        const selectedFriend = $('.friend-item.selected');
+
+        if (!selectedFriend.length) {
+            alert('請先選擇一個聊天對象');
+            return;
+        }
+
+        const friendId = selectedFriend.data('id');
+
+        // 檢查是否有文字訊息或文件預覽
+        const hasFilePreview = !$('#filePreview').hasClass('hidden');
+
+        if (!message && !hasFilePreview) {
+            return;
+        }
+
+        // 獲取當前用戶信息
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+
+        if (hasFilePreview) {
+            // 處理圖片訊息
+            const fileInput = $('#fileInput')[0];
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                uploadImage(file, friendId, userInfo);
+            }
+        } else {
+            // 處理文字訊息
+            // 使用 SignalR 發送訊息
+            connection.invoke("SendMessage", {
+                senderId: userInfo.userId,
+                receiverId: friendId,
+                messageContent: message,
+                messageType: "text"
+            }).catch(function (err) {
+                console.error(err);
+                alert('發送訊息失敗');
+            });
+
+            // 添加訊息到聊天視窗（樂觀更新 UI）
+            const tempMessage = {
+                messageId: 'temp-' + Date.now(),
+                senderId: userInfo.userId,
+                senderName: userInfo.userName,
+                senderAvatar: userInfo.userImage,
+                messageContent: message,
+                messageType: 'text',
+                createDate: new Date(),
+                isRead: false
+            };
+
+            addMessageToChat(tempMessage, true);
+        }
+
+        // 清空輸入框和預覽
+        messageInput.val('');
+        $('#filePreview').addClass('hidden');
+        $('#fileInput').val('');
+
+        // 調整輸入框高度
+        messageInput.css('height', 'auto');
+    }
+
+    // 上傳圖片
+    function uploadImage(file, friendId, userInfo) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('receiverId', friendId);
+
+        $.ajax({
+            url: '/api/chat/uploadImage',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // 使用 SignalR 發送圖片訊息
+                    connection.invoke("SendMessage", {
+                        senderId: userInfo.userId,
+                        receiverId: friendId,
+                        messageContent: response.data.url,
+                        messageType: "image"
+                    }).catch(function (err) {
+                        console.error(err);
+                        alert('發送訊息失敗');
+                    });
+
+                    // 添加圖片訊息到聊天視窗
+                    const tempMessage = {
+                        messageId: 'temp-' + Date.now(),
+                        senderId: userInfo.userId,
+                        senderName: userInfo.userName,
+                        senderAvatar: userInfo.userImage,
+                        messageContent: response.data.url,
+                        messageType: 'image',
+                        createDate: new Date(),
+                        isRead: false
+                    };
+
+                    addMessageToChat(tempMessage, true);
+                } else {
+                    alert('上傳圖片失敗: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('上傳圖片失敗: ' + error);
+            }
+        });
+    }
+
+    // 預覽圖片
+    function previewImage(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('#previewImage').attr('src', e.target.result);
+            $('#filePreview').removeClass('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 添加訊息到聊天視窗
+    function addMessageToChat(message, isSent) {
+        const messagesContainer = $('#messages-list');
+        let messageTemplate;
+
+        if (message.messageType === 'image') {
+            // 使用圖片訊息模板
+            messageTemplate = $('#image-message-template').clone().html();
+            const $messageElement = $(messageTemplate);
+
+            $messageElement.addClass(isSent ? 'sent' : '');
+            $messageElement.find('img').attr('src', message.messageContent);
+            $messageElement.find('.message-time').text(formatTime(new Date(message.createDate)));
+
+            messagesContainer.append($messageElement);
+        } else {
+            // 使用文字訊息模板
+            messageTemplate = $('#message-template').clone().html();
+            const $messageElement = $(messageTemplate);
+
+            $messageElement.addClass(isSent ? 'sent' : '');
+            $messageElement.find('.message-text').text(message.messageContent);
+            $messageElement.find('.message-time').text(formatTime(new Date(message.createDate)));
+
+            if (isSent) {
+                $messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
+            }
+
+            messagesContainer.append($messageElement);
+        }
+
+        // 將聊天視窗滾動到底部
+        const container = $('.messages-container');
+        container.scrollTop(container[0].scrollHeight);
+    }
+
+    // 載入聊天記錄
+    async function loadChatHistory(friendId) {
+        try {
+            const response = await $.ajax({
+                url: `/api/chat/history?friendId=${friendId}&pageSize=20&pageNumber=1`,
+                type: 'GET'
+            });
+
+            if (response.success) {
+                // 清空現有聊天記錄
+                $('#messages-list').empty();
+
+                // 取得當前用戶信息
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+
+                // 添加訊息到聊天視窗
+                response.data.forEach(message => {
+                    const isSent = message.senderId == userInfo.userId;
+                    addMessageToChat(message, isSent);
+                });
+
+                // 將未讀訊息標記為已讀
+                if (response.data.length > 0) {
+                    markMessagesAsRead(friendId);
+                }
+            } else {
+                console.error('獲取聊天記錄失敗：', response.message);
+            }
+        } catch (error) {
+            console.error('獲取聊天記錄失敗：', error);
+        }
+    }
+
+    // 將訊息標記為已讀
+    async function markMessagesAsRead(senderId) {
+        try {
+            await $.ajax({
+                url: '/api/chat/markAsRead',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ senderId: senderId })
+            });
+
+            // 更新好友列表中的未讀訊息計數
+            updateUnreadMessageCount(senderId, 0);
+        } catch (error) {
+            console.error('標記訊息為已讀失敗：', error);
+        }
+    }
+
+    // 更新好友列表中的未讀訊息計數
+    async function updateUnreadMessageCount(friendId, count) {
+        // 如果沒有提供 count 參數，則從 API 獲取
+        if (count === undefined) {
+            try {
+                const response = await $.ajax({
+                    url: `/api/chat/unreadCountFromFriend?friendId=${friendId}`,
+                    type: 'GET'
+                });
+
+                if (response.success) {
+                    count = response.data;
+                } else {
+                    return;
+                }
+            } catch (error) {
+                console.error('獲取未讀訊息數量失敗：', error);
+                return;
+            }
+        }
+
+        const friendItem = $(`.friend-item[data-id="${friendId}"]`);
+
+        // 更新或移除未讀標記
+        if (count > 0) {
+            let $badge = friendItem.find('.unread-badge');
+            if ($badge.length === 0) {
+                friendItem.append(`<span class="unread-badge">${count}</span>`);
+            } else {
+                $badge.text(count);
+            }
+        } else {
+            friendItem.find('.unread-badge').remove();
+        }
+    }
+
+    // 更新訊息狀態
+    function updateMessageStatus(messageId, delivered) {
+        // 找到對應的訊息元素
+        const messageElement = $(`[data-message-id="temp-${messageId}"]`);
+        if (messageElement.length) {
+            // 更新訊息狀態圖示
+            if (delivered) {
+                messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
+            } else {
+                messageElement.find('.message-status').html('<i class="fas fa-times"></i>');
+            }
+        }
+    }
+
+    // 格式化時間
+    function formatTime(date) {
+        const now = new Date();
+        const diff = (now - date) / 1000; // 差異秒數
+
+        if (diff < 60) {
+            return '剛剛';
+        } else if (diff < 3600) {
+            return `${Math.floor(diff / 60)} 分鐘前`;
+        } else if (diff < 86400) {
+            return `${Math.floor(diff / 3600)} 小時前`;
+        } else if (diff < 604800) { // 7 天內
+            return `${Math.floor(diff / 86400)} 天前`;
+        } else {
+            // 日期格式 YYYY/MM/DD HH:MM
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+
+            return `${year}/${month}/${day} ${hours}:${minutes}`;
+        }
+    }
+
+    // 在聊天室初始化時，載入未讀訊息數量
+    async function loadUnreadMessageCounts() {
+        try {
+            const response = await $.ajax({
+                url: '/api/chat/unreadCount',
+                type: 'GET'
+            });
+
+            if (response.success && response.data > 0) {
+                // 更新消息按鈕的未讀標記
+                const $messageBtn = $('.action-btn i.fa-comment').parent();
+                $messageBtn.append(`<span class="notification-badge">${response.data}</span>`);
+
+                // 載入每個好友的未讀訊息數量
+                await loadFriendsUnreadCounts();
+            }
+        } catch (error) {
+            console.error('獲取未讀訊息數量失敗：', error);
+        }
+    }
+
+    // 載入每個好友的未讀訊息數量
+    async function loadFriendsUnreadCounts() {
+        try {
+            const friendItems = $('.friend-item');
+            for (let i = 0; i < friendItems.length; i++) {
+                const friendId = $(friendItems[i]).data('id');
+                await updateUnreadMessageCount(friendId);
+            }
+        } catch (error) {
+            console.error('獲取好友未讀訊息數量失敗：', error);
         }
     }
 </script>

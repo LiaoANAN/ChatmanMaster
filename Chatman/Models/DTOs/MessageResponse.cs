@@ -8,6 +8,7 @@
         public string SenderAvatar { get; set; }
         public string MessageContent { get; set; }
         public string MessageType { get; set; }
+        public bool IsRead { get; set; }
         public DateTime CreateDate { get; set; }
     }
 }

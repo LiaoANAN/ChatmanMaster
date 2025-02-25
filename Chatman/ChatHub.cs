@@ -158,7 +158,7 @@ public class ChatHub : Hub
         }
     }
 
-    //傳送訊息
+    // 傳送訊息
     public async Task SendMessage(SendMessageRequest request)
     {
         try
@@ -168,14 +168,16 @@ public class ChatHub : Hub
             {
                 SenderId = request.SenderId,
                 ReceiverId = request.ReceiverId,
-                MessageContent = request.MessageContent,
+                Content = request.MessageContent,
                 MessageType = request.MessageType,
                 Status = "A",
+                IsRead = false,
+                IsDelete = false,
                 CreateDate = DateTime.Now,
                 CreateUserId = request.SenderId
             });
 
-            //取得寄送訊息者的資料
+            // 取得寄送訊息者的資料
             var sender = await _userService.GetUserByIdAsync(request.SenderId);
 
             // 建立回應物件
@@ -187,19 +189,22 @@ public class ChatHub : Hub
                 SenderAvatar = sender.UserImage,
                 MessageContent = request.MessageContent,
                 MessageType = request.MessageType,
-                CreateDate = DateTime.Now
+                CreateDate = DateTime.Now,
+                IsRead = false
             };
 
             // 發送給接收者
-            await Clients.User(request.ReceiverId.ToString())
+            await Clients.Group(request.ReceiverId.ToString())
                         .SendAsync("ReceiveMessage", response);
 
             // 發送回發送者（確認訊息已送達）
             await Clients.Caller.SendAsync("MessageSent", response);
+
+            _logger.LogInformation($"訊息已從 {request.SenderId} 發送給 {request.ReceiverId}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending message");
+            _logger.LogError(ex, "發送訊息時發生錯誤");
             throw;
         }
     }
@@ -216,6 +221,45 @@ public class ChatHub : Hub
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error sending friend list update notification to user {userId}");
+            throw;
+        }
+    }
+
+    // 通知用戶有新訊息
+    public async Task NotifyNewMessage(int userId, int fromUserId, string fromUserName)
+    {
+        try
+        {
+            await Clients.Group(userId.ToString()).SendAsync("NewMessage", new
+            {
+                FromUserId = fromUserId,
+                FromUserName = fromUserName
+            });
+
+            _logger.LogInformation($"新訊息通知已發送給用戶 {userId}，來自 {fromUserName}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"發送新訊息通知給用戶 {userId} 時發生錯誤");
+            throw;
+        }
+    }
+
+    // 標記訊息為已讀
+    public async Task MarkMessageAsRead(int senderId, int receiverId)
+    {
+        try
+        {
+            await _chatService.UpdateMessagesAsReadAsync(senderId, receiverId);
+
+            // 通知發送者，訊息已被讀取
+            await Clients.Group(senderId.ToString()).SendAsync("MessagesRead", receiverId);
+
+            _logger.LogInformation($"來自 {senderId} 的訊息已被 {receiverId} 標記為已讀");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"標記訊息為已讀時發生錯誤");
             throw;
         }
     }
