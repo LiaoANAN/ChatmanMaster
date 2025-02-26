@@ -398,7 +398,7 @@
                 }
 
                 // 設置圖片
-                messageElement.find('.message-image img.message-img').attr('src', message.messageContent);
+                messageElement.find('.message-image img.message-img').attr('src', message.content);
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 messagesContainer.append(messageElement);
@@ -417,7 +417,7 @@
                 }
 
                 // 設置訊息文字
-                messageElement.find('.message-text').text(message.messageContent);
+                messageElement.find('.message-text').text(message.content);
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 if (isSent) {
