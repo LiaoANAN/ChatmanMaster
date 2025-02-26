@@ -235,6 +235,9 @@
 
             //初始化聊天室功能
             initializeChatRoom();
+
+            // 新增：初始化未讀訊息功能
+            initializeUnreadMessages();
         });
 
         function initializeChat() {
@@ -644,6 +647,35 @@
                 const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
                 $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
             }
+
+            // 修改接收訊息事件處理
+            connection.on("ReceiveMessage", function (message) {
+                // 檢查當前是否正在與發送者聊天
+                const currentChatId = $('.friend-item.selected').data('id');
+                if (currentChatId && currentChatId === message.senderId) {
+                    // 如果是，直接添加訊息到聊天視窗
+                    addMessageToChat(message, false);
+
+                    // 將訊息標記為已讀
+                    markMessagesAsRead(message.senderId);
+                } else {
+                    // 如果不是，更新好友列表中的未讀訊息計數
+                    // 获取当前未读数量
+                    const friendItem = $(`.friend-item[data-id="${message.senderId}"]`);
+                    let currentCount = 0;
+                    const badge = friendItem.find('.unread-badge');
+
+                    if (badge.length) {
+                        currentCount = badge.text() === '99+' ? 99 : parseInt(badge.text(), 10);
+                    }
+
+                    // 更新未读数量
+                    updateUnreadMessageCount(message.senderId, currentCount + 1);
+
+                    // 顯示 toast 通知
+                    showToastNotification(`收到來自 ${message.senderName} 的新訊息`);
+                }
+            });
         }
 
         // 顯示 Toast 通知
@@ -782,6 +814,122 @@
 
             // 載入未讀通知
             loadUnreadNotifications();
+        }
+
+        // 未讀訊息功能初始化
+        function initializeUnreadMessages() {
+            // 在SignalR連接建立後，載入未讀訊息數量
+            if (connection.state === signalR.HubConnectionState.Connected) {
+                loadFriendsUnreadCounts();
+            } else {
+                // 如果連接尚未建立，監聽連接成功事件
+                connection.onreconnected(function () {
+                    loadFriendsUnreadCounts();
+                });
+            }
+
+            // 監聽訊息已讀事件
+            connection.on("MessagesRead", function (userId) {
+                // 如果當前用戶的訊息被某人已讀，可以更新UI顯示
+                updateMessageReadStatus(userId);
+            });
+        }
+
+        // 更新好友列表中的未讀訊息計數
+        async function updateUnreadMessageCount(friendId, count) {
+            // 如果沒有提供 count 參數，則從 API 獲取
+            if (count === undefined) {
+                try {
+                    const response = await $.ajax({
+                        url: `/api/chat/unreadCountFromFriend?friendId=${friendId}`,
+                        type: 'GET'
+                    });
+
+                    if (response.success) {
+                        count = response.data;
+                    } else {
+                        console.error('獲取未讀訊息數量失敗：', response.message);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('獲取未讀訊息數量失敗：', error);
+                    return;
+                }
+            }
+
+            // 找到對應的好友項目
+            const friendItem = $(`.friend-item[data-id="${friendId}"]`);
+            if (!friendItem.length) return;
+
+            // 更新或移除未讀標記
+            if (count > 0) {
+                let $badge = friendItem.find('.unread-badge');
+                if ($badge.length === 0) {
+                    // 如果不存在徽章，則創建一個
+                    friendItem.append(`<span class="unread-badge">${count}</span>`);
+                } else {
+                    // 如果已存在徽章，則更新數量
+                    if (count > 99) {
+                        $badge.text('99+').addClass('many');
+                    } else {
+                        $badge.text(count).removeClass('many');
+                    }
+                }
+            } else {
+                // 如果沒有未讀訊息，則移除徽章
+                friendItem.find('.unread-badge').remove();
+            }
+
+            // 更新全局未讀訊息計數
+            updateGlobalUnreadCount();
+        }
+
+        // 更新全局未讀訊息計數（顯示在聊天圖標上）
+        async function updateGlobalUnreadCount() {
+            try {
+                const response = await $.ajax({
+                    url: '/api/chat/unreadCount',
+                    type: 'GET'
+                });
+
+                if (response.success) {
+                    const count = response.data;
+                    const $messageBtn = $('.action-btn i.fa-comment').parent();
+
+                    if (count > 0) {
+                        // 更新或添加計數標記
+                        let $badge = $messageBtn.find('.notification-badge');
+                        if ($badge.length === 0) {
+                            $messageBtn.append(`<span class="notification-badge">${count}</span>`);
+                        } else {
+                            $badge.text(count);
+                        }
+                    } else {
+                        // 移除計數標記
+                        $messageBtn.find('.notification-badge').remove();
+                    }
+                }
+            } catch (error) {
+                console.error('獲取全局未讀訊息數量失敗：', error);
+            }
+        }
+
+        // 載入每個好友的未讀訊息數量
+        async function loadFriendsUnreadCounts() {
+            try {
+                // 獲取所有好友元素
+                const friendItems = $('.friend-item');
+
+                // 對每個好友發起請求獲取未讀訊息數量
+                for (let i = 0; i < friendItems.length; i++) {
+                    const friendId = $(friendItems[i]).data('id');
+                    if (friendId) {
+                        await updateUnreadMessageCount(friendId);
+                    }
+                }
+            } catch (error) {
+                console.error('獲取好友未讀訊息數量失敗：', error);
+            }
         }
 
         // 載入未讀通知

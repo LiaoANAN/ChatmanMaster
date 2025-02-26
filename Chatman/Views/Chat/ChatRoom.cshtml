@@ -83,9 +83,12 @@
     </div>
 </div>
 
-<!-- 文字訊息模板 -->
+<!-- 修改後的文字訊息模板 - 添加頭像支持 -->
 <template id="message-template">
     <div class="message" data-message-id="">
+        <div class="message-avatar">
+            <img src="" alt="avatar" class="user-avatar">
+        </div>
         <div class="message-content">
             <div class="message-text"></div>
             <div class="message-info">
@@ -96,12 +99,15 @@
     </div>
 </template>
 
-<!-- 圖片訊息模板 -->
+<!-- 修改後的圖片訊息模板 - 添加頭像支持 -->
 <template id="image-message-template">
     <div class="message" data-message-id="">
+        <div class="message-avatar">
+            <img src="" alt="avatar" class="user-avatar">
+        </div>
         <div class="message-content">
             <div class="message-image">
-                <img src="" alt="image message" loading="lazy">
+                <img src="" alt="image message" loading="lazy" class="message-img">
             </div>
             <div class="message-info">
                 <span class="message-time"></span>
@@ -386,7 +392,13 @@
                 messageElement.addClass(isSent ? 'sent' : 'received');
                 messageElement.attr('data-message-id', message.messageId);
 
-                messageElement.find('img').attr('src', message.content);
+                // 設置頭像
+                if (!isSent) {
+                    messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+                }
+
+                // 設置圖片
+                messageElement.find('.message-image img.message-img').attr('src', message.messageContent);
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 messagesContainer.append(messageElement);
@@ -399,7 +411,13 @@
                 messageElement.addClass(isSent ? 'sent' : 'received');
                 messageElement.attr('data-message-id', message.messageId);
 
-                messageElement.find('.message-text').text(message.content);
+                // 設置頭像
+                if (!isSent) {
+                    messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+                }
+
+                // 設置訊息文字
+                messageElement.find('.message-text').text(message.messageContent);
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 if (isSent) {

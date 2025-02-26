@@ -763,6 +763,55 @@
     }
 }
 
+/* 好友項目的相對定位，讓徽章可以定位在其內部 */
+.friend-item {
+    position: relative;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.friend-item:hover {
+    background-color: #f3f4f6;
+}
+
+/* 未讀訊息徽章 */
+.unread-badge {
+    position: absolute;
+    top: 0;
+    right: 5px;
+    background-color: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 未讀訊息數量超過99時顯示為99+ */
+.unread-badge.many:after {
+    content: "99+";
+}
+
+/* 選中的好友項目樣式 */
+.friend-item.selected {
+    background-color: #e5f7ed;
+}
+
+/* 選中的好友項目懸停樣式 */
+.friend-item.selected:hover {
+    background-color: #d1f2e0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .home-container {
