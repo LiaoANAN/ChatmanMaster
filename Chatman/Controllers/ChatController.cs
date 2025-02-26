@@ -1,6 +1,7 @@
 ﻿using Chatman.Filters;
 using Chatman.Helpers;
 using Chatman.Interfaces;
+using Chatman.Models;
 using Chatman.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -63,7 +64,26 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Update
+        [HttpPost("api/chat/markAsRead")]
+        public async Task<IActionResult> MarkMessagesAsRead([FromBody] ChatMessage message)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(HttpContext);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "用戶未登入" });
+                }
 
+                var response = await _chatService.UpdateMessagesAsReadAsync(message.SenderId, user.UserId);
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
         #endregion
 
         #region //Delete

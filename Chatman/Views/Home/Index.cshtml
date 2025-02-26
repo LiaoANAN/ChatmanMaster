@@ -530,36 +530,6 @@
             }
         }
 
-        // 開啟聊天室
-        function openChatRoom(friendElement) {
-            const friendId = friendElement.data('id');
-            const friendName = friendElement.find('.friend-name').text();
-            const friendAvatar = friendElement.find('img').attr('src');
-            const isOnline = friendElement.find('.status-dot').hasClass('online');
-
-            // 更新聊天室信息
-            $('.chat-user-name').text(friendName);
-            $('.chat-user-avatar').attr('src', friendAvatar);
-            $('.chat-user-status').text(isOnline ? '在線' : '離線');
-
-            // 隱藏歡迎訊息，顯示聊天室
-            $('#welcome-message').addClass('hidden');
-            $('#chat-room').removeClass('hidden');
-
-            // 載入聊天記錄
-            loadChatHistory(friendId);
-
-            // 在移動設備上，隱藏側邊欄
-            if (window.innerWidth <= 768) {
-                $('.sidebar').removeClass('active');
-            }
-        }
-
-        // 載入聊天記錄
-        function loadChatHistory(friendId) {
-            // TODO: 實作載入聊天記錄的 API 調用
-        }
-
         // 啟動 SignalR 連接
         async function startSignalRConnection() {
             try {

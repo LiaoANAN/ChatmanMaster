@@ -175,74 +175,6 @@
             element.style.height = Math.min(element.scrollHeight, maxHeight) + 'px';
         }
 
-        // 載入更多訊息
-        async function loadMoreMessages() {
-            if (isLoading || !hasMoreMessages) return;
-
-            isLoading = true;
-            currentPage += 1;
-
-            try {
-                const response = await $.ajax({
-                    url: `/api/chat/history/${currentFriendId}`,
-                    method: 'GET',
-                    data: {
-                        page: currentPage,
-                        pageSize: 20
-                    }
-                });
-
-                if (response.success) {
-                    if (response.data.length > 0) {
-                        const scrollHeight = $messagesList[0].scrollHeight;
-
-                        // 在最上方插入訊息
-                        renderMessages(response.data, true);
-
-                        // 保持滾動位置
-                        const newScrollHeight = $messagesList[0].scrollHeight;
-                        $messagesContainer.scrollTop(newScrollHeight - scrollHeight);
-                    }
-
-                    if (response.data.length < 20) {
-                        hasMoreMessages = false;
-                    }
-                }
-            } catch (error) {
-                console.error('載入更多訊息失敗:', error);
-            } finally {
-                isLoading = false;
-            }
-        }
-
-        // 渲染訊息
-        function renderMessages(messages, prepend = false) {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
-            const currentUserId = userInfo.userId;
-
-            const messagesHtml = messages.map(message => {
-                const isSent = message.senderId === currentUserId;
-                return `
-                    <div class="message ${isSent ? 'sent' : 'received'}">
-                        <div class="message-content">
-                            <div class="message-text">${message.messageContent}</div>
-                            <div class="message-info">
-                                <span class="message-time">${formatTime(new Date(message.createDate))}</span>
-                                <span class="message-status"><i class="fas fa-check"></i></span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            if (prepend) {
-                $messagesList.prepend(messagesHtml);
-            } else {
-                $messagesList.append(messagesHtml);
-                $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
-            }
-        }
-
         function formatTime(date) {
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
@@ -297,7 +229,7 @@
         $('#chat-room').removeClass('hidden');
 
         // 載入聊天記錄
-        window.chatRoomFunctions.loadChatHistory(friendId);
+        loadChatHistory(friendId);
 
         // 在移動設備上，隱藏側邊欄
         if (window.innerWidth <= 768) {
@@ -341,7 +273,7 @@
             connection.invoke("SendMessage", {
                 senderId: userInfo.userId,
                 receiverId: friendId,
-                messageContent: message,
+                content: message,
                 messageType: "text"
             }).catch(function (err) {
                 console.error(err);
@@ -354,7 +286,7 @@
                 senderId: userInfo.userId,
                 senderName: userInfo.userName,
                 senderAvatar: userInfo.userImage,
-                messageContent: message,
+                content: message,
                 messageType: 'text',
                 createDate: new Date(),
                 isRead: false
@@ -390,7 +322,7 @@
                     connection.invoke("SendMessage", {
                         senderId: userInfo.userId,
                         receiverId: friendId,
-                        messageContent: response.data.url,
+                        content: response.data.url,
                         messageType: "image"
                     }).catch(function (err) {
                         console.error(err);
@@ -403,7 +335,7 @@
                         senderId: userInfo.userId,
                         senderName: userInfo.userName,
                         senderAvatar: userInfo.userImage,
-                        messageContent: response.data.url,
+                        content: response.data.url,
                         messageType: 'image',
                         createDate: new Date(),
                         isRead: false
@@ -430,6 +362,58 @@
         reader.readAsDataURL(file);
     }
 
+    // 渲染訊息
+    function renderMessages(messages) {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+        const messagesContainer = $('#messages-list');
+
+        // 清空容器
+        messagesContainer.empty();
+
+        // 按時間排序（從舊到新）
+        messages.sort((a, b) => new Date(a.createDate) - new Date(b.createDate));
+
+        // 添加訊息到容器
+        messages.forEach(message => {
+            const isSent = message.senderId == userInfo.userId;
+
+            if (message.messageType === 'image') {
+                // 圖片訊息
+                const template = document.getElementById('image-message-template');
+                const messageDiv = document.importNode(template.content, true);
+
+                const messageElement = $(messageDiv).find('.message');
+                messageElement.addClass(isSent ? 'sent' : 'received');
+                messageElement.attr('data-message-id', message.messageId);
+
+                messageElement.find('img').attr('src', message.content);
+                messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+                messagesContainer.append(messageElement);
+            } else {
+                // 文字訊息
+                const template = document.getElementById('message-template');
+                const messageDiv = document.importNode(template.content, true);
+
+                const messageElement = $(messageDiv).find('.message');
+                messageElement.addClass(isSent ? 'sent' : 'received');
+                messageElement.attr('data-message-id', message.messageId);
+
+                messageElement.find('.message-text').text(message.content);
+                messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+                if (isSent) {
+                    messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
+                }
+
+                messagesContainer.append(messageElement);
+            }
+        });
+
+        // 滾動到底部
+        scrollToBottom();
+    }
+
     // 添加訊息到聊天視窗
     function addMessageToChat(message, isSent) {
         const messagesContainer = $('#messages-list');
@@ -437,65 +421,142 @@
 
         if (message.messageType === 'image') {
             // 使用圖片訊息模板
-            messageTemplate = $('#image-message-template').clone().html();
-            const $messageElement = $(messageTemplate);
+            const template = document.getElementById('image-message-template');
+            const messageDiv = document.importNode(template.content, true);
 
-            $messageElement.addClass(isSent ? 'sent' : '');
-            $messageElement.find('img').attr('src', message.messageContent);
-            $messageElement.find('.message-time').text(formatTime(new Date(message.createDate)));
+            const messageElement = $(messageDiv).find('.message');
+            messageElement.addClass(isSent ? 'sent' : 'received');
+            messageElement.attr('data-message-id', message.messageId);
 
-            messagesContainer.append($messageElement);
+            messageElement.find('img').attr('src', message.content);
+            messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+            messagesContainer.append(messageElement);
         } else {
             // 使用文字訊息模板
-            messageTemplate = $('#message-template').clone().html();
-            const $messageElement = $(messageTemplate);
+            const template = document.getElementById('message-template');
+            const messageDiv = document.importNode(template.content, true);
 
-            $messageElement.addClass(isSent ? 'sent' : '');
-            $messageElement.find('.message-text').text(message.messageContent);
-            $messageElement.find('.message-time').text(formatTime(new Date(message.createDate)));
+            const messageElement = $(messageDiv).find('.message');
+            messageElement.addClass(isSent ? 'sent' : 'received');
+            messageElement.attr('data-message-id', message.messageId);
+
+            messageElement.find('.message-text').text(message.content);
+            messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
             if (isSent) {
-                $messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
+                messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
             }
 
-            messagesContainer.append($messageElement);
+            messagesContainer.append(messageElement);
+        }
+
+        // 更新消息列表（如果需要）
+        if (messagesList) {
+            messagesList.push(message);
         }
 
         // 將聊天視窗滾動到底部
-        const container = $('.messages-container');
-        container.scrollTop(container[0].scrollHeight);
+        scrollToBottom();
     }
 
     // 載入聊天記錄
     async function loadChatHistory(friendId) {
+        currentFriendId = friendId;
+        currentPage = 1;
+        isLoading = true;
+        hasMoreMessages = true;
+
+        // 清空訊息列表
+        $('#messages-list').empty();
+        messagesList = [];
+
         try {
+            console.log(`開始加載聊天記錄，friendId: ${friendId}`);
             const response = await $.ajax({
-                url: `/api/chat/history?friendId=${friendId}&pageSize=20&pageNumber=1`,
+                url: `/api/chat/history?friendId=${friendId}&pageSize=20&pageNumber=${currentPage}`,
                 type: 'GET'
             });
 
             if (response.success) {
-                // 清空現有聊天記錄
-                $('#messages-list').empty();
+                console.log(`獲取聊天記錄成功，數量: ${response.data.length}`);
 
                 // 取得當前用戶信息
                 const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
 
                 // 添加訊息到聊天視窗
-                response.data.forEach(message => {
-                    const isSent = message.senderId == userInfo.userId;
-                    addMessageToChat(message, isSent);
-                });
-
-                // 將未讀訊息標記為已讀
                 if (response.data.length > 0) {
+                    messagesList = response.data;
+                    renderMessages(response.data);
+
+                    // 將未讀訊息標記為已讀
                     markMessagesAsRead(friendId);
+
+                    // 判斷是否還有更多訊息
+                    if (response.data.length < 20) {
+                        hasMoreMessages = false;
+                        $('.load-more').addClass('hidden');
+                    } else {
+                        $('.load-more').removeClass('hidden');
+                    }
+                } else {
+                    console.log("沒有聊天記錄");
+                    hasMoreMessages = false;
+                    $('.load-more').addClass('hidden');
                 }
             } else {
                 console.error('獲取聊天記錄失敗：', response.message);
             }
         } catch (error) {
             console.error('獲取聊天記錄失敗：', error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // 載入更多歷史訊息（向上加載更多）
+    async function loadMoreMessages() {
+        if (isLoading || !hasMoreMessages || !currentFriendId) return;
+
+        isLoading = true;
+        currentPage++;
+
+        try {
+            const response = await $.ajax({
+                url: `/api/chat/history?friendId=${currentFriendId}&pageSize=20&pageNumber=${currentPage}`,
+                type: 'GET'
+            });
+
+            if (response.success) {
+                if (response.data.length > 0) {
+                    // 保存目前的滾動位置
+                    const scrollHeight = $('.messages-container')[0].scrollHeight;
+                    const scrollPosition = $('.messages-container').scrollTop();
+
+                    // 合併訊息並重新渲染
+                    // 注意：後端API返回的訊息可能按時間降序排列（新的在前），
+                    // 但我們希望在畫面上按升序顯示（舊的在前）
+                    messagesList = [...response.data, ...messagesList];
+                    renderMessages(messagesList);
+
+                    // 恢復原來的滾動位置
+                    const newScrollHeight = $('.messages-container')[0].scrollHeight;
+                    $('.messages-container').scrollTop(newScrollHeight - scrollHeight + scrollPosition);
+
+                    // 判斷是否還有更多訊息
+                    if (response.data.length < 20) {
+                        hasMoreMessages = false;
+                        $('.load-more').addClass('hidden');
+                    }
+                } else {
+                    hasMoreMessages = false;
+                    $('.load-more').addClass('hidden');
+                }
+            }
+        } catch (error) {
+            console.error('載入更多訊息失敗：', error);
+        } finally {
+            isLoading = false;
         }
     }
 
@@ -589,6 +650,18 @@
 
             return `${year}/${month}/${day} ${hours}:${minutes}`;
         }
+    }
+
+    // 格式化時間顯示
+    function formatTimeForMessage(date) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    function scrollToBottom() {
+        const container = $('.messages-container');
+        container.scrollTop(container[0].scrollHeight);
     }
 
     // 在聊天室初始化時，載入未讀訊息數量

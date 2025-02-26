@@ -69,7 +69,7 @@ namespace Chatman.Services
                         SenderId = m.SenderId,
                         SenderName = senderInfo.ContainsKey(m.SenderId) ? senderInfo[m.SenderId].UserName : "未知用戶",
                         SenderAvatar = senderInfo.ContainsKey(m.SenderId) ? senderInfo[m.SenderId].UserImage : "",
-                        MessageContent = m.Content,
+                        Content = m.Content,
                         MessageType = m.MessageType,
                         CreateDate = m.CreateDate,
                         IsRead = m.IsRead

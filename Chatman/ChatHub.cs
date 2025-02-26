@@ -168,7 +168,7 @@ public class ChatHub : Hub
             {
                 SenderId = request.SenderId,
                 ReceiverId = request.ReceiverId,
-                Content = request.MessageContent,
+                Content = request.Content,
                 MessageType = request.MessageType,
                 Status = "A",
                 IsRead = false,
@@ -187,7 +187,7 @@ public class ChatHub : Hub
                 SenderId = sender.UserId,
                 SenderName = sender.UserName,
                 SenderAvatar = sender.UserImage,
-                MessageContent = request.MessageContent,
+                Content = request.Content,
                 MessageType = request.MessageType,
                 CreateDate = DateTime.Now,
                 IsRead = false

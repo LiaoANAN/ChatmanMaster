@@ -23,12 +23,12 @@ namespace Chatman.Repositories
             {
                 int offset = (pageNumber - 1) * pageSize;
 
-                sql = @"SELECT MessageId, SenderId, ReceiverId, MessageType, Content as MessageContent, 
-                               MediaUrl, IsRead, IsDeleted, Status, CreateDate
+                sql = @"SELECT MessageId, SenderId, ReceiverId, MessageType, Content, 
+                               MediaUrl, IsRead, IsDelete, Status, CreateDate
                         FROM CHAT.Message
                         WHERE ((SenderId = @UserId AND ReceiverId = @FriendId) 
                            OR (SenderId = @FriendId AND ReceiverId = @UserId))
-                          AND IsDeleted = 0
+                          AND IsDelete = 0
                         ORDER BY CreateDate DESC
                         OFFSET @Offset ROWS
                         FETCH NEXT @PageSize ROWS ONLY";
@@ -58,7 +58,7 @@ namespace Chatman.Repositories
                         FROM CHAT.Message 
                         WHERE ReceiverId = @UserId 
                           AND IsRead = 0
-                          AND IsDeleted = 0";
+                          AND IsDelete = 0";
 
                 return await sqlConnection.ExecuteScalarAsync<int>(sql, new { UserId = userId });
             }
