@@ -867,15 +867,14 @@
 
         // 添加通知到選單
         function addNotificationToMenu(notification) {
-            console.log("addNotificationToMenu:", notification);
             const $notificationMenu = $('.notification-menu .menu-content');
 
             // 如果是空狀態，先清除
             $notificationMenu.find('.empty-state').remove();
 
             // 格式化日期時間
-            const createTime = new Date(notification.createTime);
-            const formattedTime = formatTime(createTime);
+            const createTime = new Date(notification.createDate);
+            const formattedTime = notificationformatTime(createTime);
 
             // 根據通知類型生成不同的 HTML
             let notificationHtml = '';
@@ -913,6 +912,30 @@
 
             // 更新通知計數
             updateNotificationCount();
+        }
+
+        // 格式化時間
+        function notificationformatTime(date) {
+            if (!date || isNaN(date.getTime())) {
+                return '剛剛';
+            }
+
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // 差異秒數
+
+            if (diff < 60) {
+                return '剛剛';
+            } else if (diff < 3600) {
+                return `${Math.floor(diff / 60)} 分鐘前`;
+            } else if (diff < 86400) {
+                return `${Math.floor(diff / 3600)} 小時前`;
+            } else {
+                // 自定義日期格式
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}/${month}/${day}`;
+            }
         }
 
         // 處理好友請求

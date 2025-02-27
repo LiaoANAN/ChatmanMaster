@@ -261,7 +261,7 @@ namespace Chatman.Services
             }
         }
 
-        public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId)
+        public async Task<List<NotificationResponse>> GetUnreadNotificationsAsync(int userId)
         {
             using (SqlConnection sqlConnection = _db.CreateConnection())
             {

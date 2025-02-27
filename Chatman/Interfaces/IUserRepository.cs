@@ -13,7 +13,7 @@ namespace Chatman.Interfaces
         Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId, SqlConnection sqlConnection);
         Task<bool> CheckFriendStatusAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<bool> CheckFriendRequestAsync(int userId, int friendId, SqlConnection sqlConnection);
-        Task<List<Notification>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection);
+        Task<List<NotificationResponse>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection);
         Task<FriendRequest> GetFriendRequestByIdAsync(int friendRequestId, SqlConnection sqlConnection);
         Task<bool> IsFriendRequestAsync(int friendRequestId, SqlConnection sqlConnection);
         #endregion

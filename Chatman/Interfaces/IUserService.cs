@@ -17,7 +17,7 @@ namespace Chatman.Interfaces
         Task<UserInfo> GetUserByIdAsync(int userId);
         Task<List<GetUserByKeywordResponse>> GetUserByKeywordAsync(string keyword, int userId);
         Task<List<FriendRelation>> GetFriendsByUserIdAsync(int userId);
-        Task<List<Notification>> GetUnreadNotificationsAsync(int userId);
+        Task<List<NotificationResponse>> GetUnreadNotificationsAsync(int userId);
         #endregion
 
         #region //Add

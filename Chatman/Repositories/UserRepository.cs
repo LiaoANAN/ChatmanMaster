@@ -149,18 +149,19 @@ namespace Chatman.Repositories
             }
         }
 
-        public async Task<List<Notification>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection)
+        public async Task<List<NotificationResponse>> GetUnreadNotificationsAsync(int userId, SqlConnection sqlConnection)
         {
             try
             {
-                sql = @"SELECT a.NotificationId, a.UserId, a.Type, a.Message, a.RequestId, a.SenderId, a.IsRead, a.Status 
-                        , b.Email, b.UserName, b.UserImage, b.Gender
+                sql = @"SELECT a.NotificationId, a.UserId, a.Type, a.Message, a.RequestId, a.SenderId, a.IsRead, a.Status
+                        , FORMAT(a.CreateDate, 'yyyy-MM-dd') CreateDate
+                        , b.Email, b.UserName SenderName, b.UserImage SenderImage, b.Gender
                         FROM BAS.Notification a 
                         INNER JOIN BAS.UserInfo b ON a.SenderId = b.UserId
                         WHERE a.UserId = @UserId
                         AND  a.IsRead = 0";
 
-                var result = (await sqlConnection.QueryAsync<Notification>(sql, new { UserId = userId })).ToList();
+                var result = (await sqlConnection.QueryAsync<NotificationResponse>(sql, new { UserId = userId })).ToList();
 
                 return result;
             }
