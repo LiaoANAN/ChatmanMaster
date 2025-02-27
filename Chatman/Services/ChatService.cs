@@ -85,20 +85,35 @@ namespace Chatman.Services
             }
         }
 
-        public async Task<ServiceResponse<int>> GetUnreadMessagesCountAsync(int userId)
+        public async Task<int> GetUnreadMessagesCountAsync(int userId)
         {
             try
             {
                 using (SqlConnection sqlConnection = _db.CreateConnection())
                 {
-                    var count = await _chatRepository.GetUnreadMessagesCountAsync(userId, sqlConnection);
-                    return ServiceResponse<int>.ExcuteSuccess(count);
+                    return await _chatRepository.GetUnreadMessagesCountAsync(userId, sqlConnection);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤: {UserId}", userId);
-                return ServiceResponse<int>.ServerError();
+                return 0;
+            }
+        }
+
+        public async Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    return await _chatRepository.GetUnreadMessagesCountFromFriendAsync(userId, friendId, sqlConnection);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤: {UserId}", userId);
+                return 0;
             }
         }
         #endregion

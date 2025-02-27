@@ -48,31 +48,10 @@
             <div class="list-section" id="friends-list">
                 <div class="list-group">
                     <h4>線上好友</h4>
-                    <div class="friend-item">
-                        <div class="friend-avatar-container">
-                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
-                            <span class="status-dot online"></span>
-                        </div>
-                        <span class="friend-name">Allan</span>
-                    </div>
-                    <div class="friend-item">
-                        <div class="friend-avatar-container">
-                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
-                            <span class="status-dot online"></span>
-                        </div>
-                        <span class="friend-name">Jack</span>
-                    </div>
                 </div>
 
                 <div class="list-group">
                     <h4>離線好友</h4>
-                    <div class="friend-item">
-                        <div class="friend-avatar-container">
-                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLe5PABjXc17cjIMOibECLM7ppDwMmiDg6Dw&s" alt="Friend avatar">
-                            <span class="status-dot offline"></span>
-                        </div>
-                        <span class="friend-name">Jason</span>
-                    </div>
                 </div>
             </div>
 
@@ -236,8 +215,8 @@
             //初始化聊天室功能
             initializeChatRoom();
 
-            // 新增：初始化未讀訊息功能
-            initializeUnreadMessages();
+            // 加載未讀訊息功能
+            loadUnreadMessageCounts();
         });
 
         function initializeChat() {
@@ -432,6 +411,11 @@
 
                 if (response.success){
                     renderFriendsList(response.data);
+
+                    // 在渲染好友列表後調用加載未讀消息數量
+                    setTimeout(async () => {
+                        await loadFriendsUnreadCounts();
+                    }, 500);
                 }
                 else{
                     errorAlert('註冊失敗', response.message || '發生錯誤', 1500);
@@ -453,25 +437,27 @@
 
             onlineFriends.forEach(friend => {
                 onlineHtml += `
-                    <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName}">
-                        <div class="friend-avatar-container">
-                            <img src="${friend.userImage}" alt="${friend.userName}">
-                            <span class="status-dot online"></span>
-                        </div>
-                        <span class="friend-name">${friend.userName}</span>
-                    </div>
+                                <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName}">
+                                    <div class="friend-avatar-container">
+                                        <img src="${friend.userImage}" alt="${friend.userName}">
+                                        <span class="status-dot online"></span>
+                                        <span class="unread-badge" style="display: none;">0</span>
+                                    </div>
+                                    <span class="friend-name">${friend.userName}</span>
+                                </div>
                 `;
             });
 
             offlineFriends.forEach(friend => {
                 offlineHtml += `
-                     <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName.toLowerCase()}">
-                        <div class="friend-avatar-container">
-                            <img src="${friend.userImage}" alt="${friend.userName}">
-                            <span class="status-dot offline"></span>
-                        </div>
-                        <span class="friend-name">${friend.userName}</span>
-                    </div>
+                             <div class="friend-item" data-id="${friend.friendId}" data-name="${friend.userName}">
+                                <div class="friend-avatar-container">
+                                    <img src="${friend.userImage}" alt="${friend.userName}">
+                                    <span class="status-dot offline"></span>
+                                    <span class="unread-badge" style="display: none;">0</span>
+                                </div>
+                                <span class="friend-name">${friend.userName}</span>
+                            </div>
                 `;
             });
 
@@ -647,35 +633,6 @@
                 const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
                 $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
             }
-
-            // 修改接收訊息事件處理
-            connection.on("ReceiveMessage", function (message) {
-                // 檢查當前是否正在與發送者聊天
-                const currentChatId = $('.friend-item.selected').data('id');
-                if (currentChatId && currentChatId === message.senderId) {
-                    // 如果是，直接添加訊息到聊天視窗
-                    addMessageToChat(message, false);
-
-                    // 將訊息標記為已讀
-                    markMessagesAsRead(message.senderId);
-                } else {
-                    // 如果不是，更新好友列表中的未讀訊息計數
-                    // 获取当前未读数量
-                    const friendItem = $(`.friend-item[data-id="${message.senderId}"]`);
-                    let currentCount = 0;
-                    const badge = friendItem.find('.unread-badge');
-
-                    if (badge.length) {
-                        currentCount = badge.text() === '99+' ? 99 : parseInt(badge.text(), 10);
-                    }
-
-                    // 更新未读数量
-                    updateUnreadMessageCount(message.senderId, currentCount + 1);
-
-                    // 顯示 toast 通知
-                    showToastNotification(`收到來自 ${message.senderName} 的新訊息`);
-                }
-            });
         }
 
         // 顯示 Toast 通知
@@ -816,28 +773,39 @@
             loadUnreadNotifications();
         }
 
-        // 未讀訊息功能初始化
-        function initializeUnreadMessages() {
-            // 在SignalR連接建立後，載入未讀訊息數量
-            if (connection.state === signalR.HubConnectionState.Connected) {
-                loadFriendsUnreadCounts();
-            } else {
-                // 如果連接尚未建立，監聽連接成功事件
-                connection.onreconnected(function () {
-                    loadFriendsUnreadCounts();
+        // 加載所有未讀訊息數量
+        async function loadUnreadMessageCounts() {
+            try {
+                const response = await $.ajax({
+                    url: '/api/chat/unreadCount',
+                    type: 'GET'
                 });
-            }
 
-            // 監聽訊息已讀事件
-            connection.on("MessagesRead", function (userId) {
-                // 如果當前用戶的訊息被某人已讀，可以更新UI顯示
-                updateMessageReadStatus(userId);
-            });
+                if (response.success && response.count > 0) {
+                    // 更新消息按鈕的未讀標記
+                    const $messageBtn = $('.action-btn i.fa-comment').parent();
+                    $messageBtn.append(`<span class="notification-badge">${response.count}</span>`);
+                }
+            } catch (error) {
+                console.error('獲取未讀訊息數量失敗：', error);
+            }
+        }
+
+        // 加載每個好友的未讀訊息數量
+        async function loadFriendsUnreadCounts() {
+            try {
+                const friendItems = $('.friend-item');
+                for (let i = 0; i < friendItems.length; i++) {
+                    const friendId = $(friendItems[i]).data('id');
+                    await updateUnreadMessageCount(friendId);
+                }
+            } catch (error) {
+                console.error('獲取好友未讀訊息數量失敗：', error);
+            }
         }
 
         // 更新好友列表中的未讀訊息計數
         async function updateUnreadMessageCount(friendId, count) {
-            // 如果沒有提供 count 參數，則從 API 獲取
             if (count === undefined) {
                 try {
                     const response = await $.ajax({
@@ -846,9 +814,8 @@
                     });
 
                     if (response.success) {
-                        count = response.data;
+                        count = response.count;
                     } else {
-                        console.error('獲取未讀訊息數量失敗：', response.message);
                         return;
                     }
                 } catch (error) {
@@ -857,79 +824,26 @@
                 }
             }
 
-            // 找到對應的好友項目
             const friendItem = $(`.friend-item[data-id="${friendId}"]`);
-            if (!friendItem.length) return;
+            const $badge = friendItem.find('.unread-badge');
 
             // 更新或移除未讀標記
             if (count > 0) {
-                let $badge = friendItem.find('.unread-badge');
-                if ($badge.length === 0) {
-                    // 如果不存在徽章，則創建一個
-                    friendItem.append(`<span class="unread-badge">${count}</span>`);
-                } else {
-                    // 如果已存在徽章，則更新數量
-                    if (count > 99) {
-                        $badge.text('99+').addClass('many');
-                    } else {
-                        $badge.text(count).removeClass('many');
-                    }
-                }
+                $badge.text(count).show();
             } else {
-                // 如果沒有未讀訊息，則移除徽章
-                friendItem.find('.unread-badge').remove();
+                $badge.hide();
             }
 
-            // 更新全局未讀訊息計數
-            updateGlobalUnreadCount();
-        }
-
-        // 更新全局未讀訊息計數（顯示在聊天圖標上）
-        async function updateGlobalUnreadCount() {
-            try {
-                const response = await $.ajax({
-                    url: '/api/chat/unreadCount',
-                    type: 'GET'
-                });
-
-                if (response.success) {
-                    const count = response.data;
-                    const $messageBtn = $('.action-btn i.fa-comment').parent();
-
-                    if (count > 0) {
-                        // 更新或添加計數標記
-                        let $badge = $messageBtn.find('.notification-badge');
-                        if ($badge.length === 0) {
-                            $messageBtn.append(`<span class="notification-badge">${count}</span>`);
-                        } else {
-                            $badge.text(count);
-                        }
-                    } else {
-                        // 移除計數標記
-                        $messageBtn.find('.notification-badge').remove();
-                    }
-                }
-            } catch (error) {
-                console.error('獲取全局未讀訊息數量失敗：', error);
-            }
-        }
-
-        // 載入每個好友的未讀訊息數量
-        async function loadFriendsUnreadCounts() {
-            try {
-                // 獲取所有好友元素
-                const friendItems = $('.friend-item');
-
-                // 對每個好友發起請求獲取未讀訊息數量
-                for (let i = 0; i < friendItems.length; i++) {
-                    const friendId = $(friendItems[i]).data('id');
-                    if (friendId) {
-                        await updateUnreadMessageCount(friendId);
-                    }
-                }
-            } catch (error) {
-                console.error('獲取好友未讀訊息數量失敗：', error);
-            }
+            // if (count > 0) {
+            //     let $badge = friendItem.find('.unread-badge');
+            //     if ($badge.length === 0) {
+            //         friendItem.append(`<span class="unread-badge">${count}</span>`);
+            //     } else {
+            //         $badge.text(count).show();
+            //     }
+            // } else {
+            //     friendItem.find('.unread-badge').hide();
+            // }
         }
 
         // 載入未讀通知
@@ -1108,30 +1022,6 @@
                 }
             } catch (error) {
                 console.error('標記已讀失敗:', error);
-            }
-        }
-
-        // 格式化時間
-        function formatTime(date) {
-            if (!date || isNaN(date.getTime())) {
-                return '剛剛';
-            }
-
-            const now = new Date();
-            const diff = Math.floor((now - date) / 1000); // 差異秒數
-
-            if (diff < 60) {
-                return '剛剛';
-            } else if (diff < 3600) {
-                return `${Math.floor(diff / 60)} 分鐘前`;
-            } else if (diff < 86400) {
-                return `${Math.floor(diff / 3600)} 小時前`;
-            } else {
-                // 自定義日期格式
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}/${month}/${day}`;
             }
         }
 

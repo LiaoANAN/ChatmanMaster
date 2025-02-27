@@ -1,8 +1,10 @@
-﻿using Chatman.Filters;
+﻿using Azure;
+using Chatman.Filters;
 using Chatman.Helpers;
 using Chatman.Interfaces;
 using Chatman.Models;
 using Chatman.Models.DTOs;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -57,6 +59,78 @@ namespace Chatman.Controllers
                 return StatusCode(500, ServiceResponse<List<MessageResponse>>.ServerError());
             }
         }
+
+        #region //取得未讀訊息總數
+        [HttpGet("api/chat/unreadCount")]
+        public async Task<IActionResult> GetUnReadCount()
+        {
+            try
+            {
+                UserInfo user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var count = await _chatService.GetUnreadMessagesCountAsync(user.UserId);
+
+                return Ok(new
+                {
+                    success = true,
+                    count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤");
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+        #endregion
+
+        #region //取得未讀訊息總數()
+        [HttpGet("api/chat/unreadCountFromFriend")]
+        public async Task<IActionResult> GetUnReadCountFromFriend(int friendId)
+        {
+            try
+            {
+                UserInfo user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var count = await _chatService.GetUnreadMessagesCountFromFriendAsync(user.UserId, friendId);
+
+                return Ok(new
+                {
+                    success = true,
+                    count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤");
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+        #endregion
         #endregion
 
         #region //Add

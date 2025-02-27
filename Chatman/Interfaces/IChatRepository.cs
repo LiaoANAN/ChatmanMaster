@@ -8,6 +8,7 @@ namespace Chatman.Interfaces
         #region //Get
         Task<List<ChatMessage>> GetChatHistoryAsync(int userId, int friendId, int pageSize, int pageNumber, SqlConnection sqlConnection);
         Task<int> GetUnreadMessagesCountAsync(int userId, SqlConnection sqlConnection);
+        Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId, SqlConnection sqlConnection);
         #endregion
 
         #region //Add

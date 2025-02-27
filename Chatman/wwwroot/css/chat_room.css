@@ -450,26 +450,6 @@
   background: #fff5f5;
 }
 
-/* 未讀訊息標記 */
-.unread-badge {
-  background: #ef4444;
-  color: white;
-  font-size: 0.75rem;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: -5px;
-  right: -5px;
-}
-
-.friend-item {
-  position: relative;
-}
-
 /* 動畫效果 */
 @keyframes fadeIn {
   from {
@@ -481,6 +461,38 @@
     transform: translateY(0);
   }
 }
+/* 側邊欄在手機版隱藏時的樣式 */
+.sidebar.mobile-hidden {
+  display: none !important;
+}
+
+/* 主內容區在手機版顯示時的樣式 */
+.main-content.mobile-active {
+  display: flex !important;
+  width: 100% !important;
+  left: 0;
+}
+
+/* 聊天室返回按鈕樣式 */
+.back-button {
+  margin-right: 10px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #6b7280;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
   .chat-header {
@@ -494,6 +506,51 @@
   }
   .message-image img {
     max-width: 200px;
+  }
+  .home-container {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+  /* 聊天室顯示時的主內容區域 */
+  .main-content.mobile-active {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    background-color: #ffffff;
+  }
+  /* 聊天室顯示時，確保訊息區域能夠正確滾動 */
+  .main-content.mobile-active .chat-room {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+  }
+  /* 調整聊天頭部區域在手機版的樣式 */
+  .chat-header {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+  }
+  /* 調整訊息容器在手機版的樣式 */
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  /* 調整輸入區域在手機版的樣式 */
+  .input-area {
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
   }
 }
 /* 空聊天室提示 */

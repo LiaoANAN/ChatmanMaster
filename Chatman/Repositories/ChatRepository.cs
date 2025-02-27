@@ -58,9 +58,31 @@ namespace Chatman.Repositories
                         FROM CHAT.Message 
                         WHERE ReceiverId = @UserId 
                           AND IsRead = 0
-                          AND IsDelete = 0";
+                          AND IsDelete = 0
+                          AND Status = 'A'";
 
                 return await sqlConnection.ExecuteScalarAsync<int>(sql, new { UserId = userId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤: {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"SELECT COUNT(*) 
+                        FROM CHAT.Message 
+                        WHERE ReceiverId = @UserId 
+                          AND SenderId = @FriendId
+                          AND IsRead = 0
+                          AND IsDelete = 0
+                          AND Status = 'A'";
+
+                return await sqlConnection.ExecuteScalarAsync<int>(sql, new { UserId = userId, FriendId = friendId });
             }
             catch (Exception ex)
             {
