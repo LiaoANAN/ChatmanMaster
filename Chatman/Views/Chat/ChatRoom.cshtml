@@ -23,15 +23,14 @@
 
     <!-- 聊天記錄區域 -->
     <div class="messages-container">
-        <div class="messages-list" id="messages-list">
-            <!-- 訊息列表會動態插入這裡 -->
-        </div>
-
         <!-- 載入更多按鈕 -->
         <div class="load-more hidden">
             <button id="btnLoadMore" class="load-more-btn">
                 載入更多訊息
             </button>
+        </div>
+        <div class="messages-list" id="messages-list">
+            <!-- 訊息列表會動態插入這裡 -->
         </div>
     </div>
 
@@ -465,7 +464,6 @@
         // 添加訊息到容器
         messages.forEach(message => {
             const isSent = message.senderId == userInfo.userId;
-
             if (message.messageType === 'image') {
                 // 圖片訊息
                 const template = document.getElementById('image-message-template');
@@ -541,6 +539,10 @@
             const messageElement = $(messageDiv).find('.message');
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
+
+            if (!isSent) {
+                messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+            }
 
             messageElement.find('.message-text').text(message.content);
             messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));

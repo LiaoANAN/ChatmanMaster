@@ -405,7 +405,8 @@
 /* 載入更多按鈕 */
 .load-more {
     text-align: center;
-    margin: 1rem 0;
+    margin: 0.5rem 0;
+    order: -1; /* 確保它在 flex 布局中顯示在頂部 */
 
     &.hidden {
         display: none;
@@ -528,7 +529,13 @@
     }
 
     .input-area {
-        padding: 0.75rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        z-index: 100;
     }
 
     .message {
@@ -574,9 +581,7 @@
 
     /* 調整訊息容器在手機版的樣式 */
     .messages-container {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px;
+        padding-bottom: 80px; /* Provides space for the fixed input area */
     }
 
     /* 調整輸入區域在手機版的樣式 */
@@ -588,6 +593,28 @@
         right: 0;
         background: white;
         border-top: 1px solid #e5e7eb;
+    }
+
+    .scroll-bottom {
+        bottom: 90px;
+        z-index: 101;
+    }
+
+    /* Make sure the chat room takes full height on mobile */
+    .chat-room {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @supports (-webkit-touch-callout: none) {
+        .chat-room {
+            height: -webkit-fill-available;
+        }
+
+        .messages-container {
+            padding-bottom: 90px; /* Slightly more padding for iOS */
+        }
     }
 }
 
