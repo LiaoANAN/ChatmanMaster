@@ -28,6 +28,7 @@ namespace Chatman.Interfaces
         Task<bool> UpdateUserBioAsync(UserInfo user);
         Task<ServiceResponse<bool>> UpdateFriendRequestAsync(FriendRequest request);
         Task<ServiceResponse<bool>> UpdateNotificationStatusAsync(Notification notification);
+        Task<ServiceResponse<bool>> UpdateProfileAsync(UserInfo user);
         #endregion
 
         #region //Delete

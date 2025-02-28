@@ -29,6 +29,7 @@ namespace Chatman.Interfaces
         Task<bool> UpdateUserBioAsync(UserInfo user, SqlConnection sqlConnection);
         Task<bool> UpdateFriendRequestAsync(FriendRequest request, SqlConnection sqlConnection);
         Task<bool> UpdateNotificationStatusAsync(Notification notification, SqlConnection sqlConnection);
+        Task<bool> UpdateProfileAsync(UserInfo user, SqlConnection sqlConnection);
         #endregion
 
         #region //Delete

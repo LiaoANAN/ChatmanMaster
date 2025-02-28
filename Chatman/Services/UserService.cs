@@ -457,6 +457,22 @@ namespace Chatman.Services
             }
             return ServiceResponse<bool>.ExcuteSuccess();
         }
+
+        public async Task<ServiceResponse<bool>> UpdateProfileAsync(UserInfo user)
+        {
+            using TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    if (!await _userRepository.UpdateProfileAsync(user, sqlConnection))
+                    {
+                        return ServiceResponse<bool>.ExcuteError("更改個人基本資料錯誤!");
+                    }
+                }
+                transactionScope.Complete();
+            }
+            return ServiceResponse<bool>.ExcuteSuccess();
+        }
         #endregion
 
         #region //Delete

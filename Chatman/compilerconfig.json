@@ -14,5 +14,9 @@
   {
     "outputFile": "wwwroot/css/customer_alert.css",
     "inputFile": "wwwroot/css/customer_alert.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/profile.css",
+    "inputFile": "wwwroot/css/profile.scss"
   }
 ]

@@ -1,0 +1,184 @@
+﻿<link rel="stylesheet" href="~/css/profile.min.css" />
+
+<div id="profileEditModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>個人資料設定</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <form id="profileForm">
+                <!-- 頭像上傳區域 -->
+                <div class="avatar-upload-container">
+                    <div class="avatar-preview">
+                        <img id="avatarPreview" src="" alt="頭像預覽">
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera"></i>
+                            <span>更換頭像</span>
+                        </div>
+                    </div>
+                    <input type="file" id="avatarInput" accept="image/*" class="hidden">
+                </div>
+
+                <!-- 個人資料欄位 -->
+                <div class="form-group">
+                    <label for="txtUserName">顯示名稱</label>
+                    <input type="text" id="txtUserName" class="form-control" placeholder="您的顯示名稱">
+                </div>
+
+                <div class="form-group">
+                    <label for="txtBio">個人簡介</label>
+                    <textarea id="txtBio" class="form-control" rows="3" placeholder="介紹一下自己..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="txtBirthday">生日</label>
+                    <input id="txtBirthday" type="date" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label>性別</label>
+                    <div class="gender-options">
+                        <label class="gender-option">
+                            <input type="radio" name="rdoGender" value="M">
+                            <span>男性</span>
+                        </label>
+                        <label class="gender-option">
+                            <input type="radio" name="rdoGender" value="F">
+                            <span>女性</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn">取消</button>
+                    <button type="submit" class="save-btn">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function initializeProfileEdit() {
+        // 關閉模態窗口
+        $('#profileEditModal .close-btn, #profileEditModal .cancel-btn').click(function () {
+            $('#profileEditModal').addClass('hidden');
+        });
+
+        // 點擊頭像預覽區域觸發文件選擇
+        $('.avatar-preview').click(function () {
+            $('#avatarInput').click();
+        });
+
+        // 處理頭像預覽
+        $('#avatarInput').change(function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.match('image.*')) {
+                alert('請選擇圖片檔案');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                $('#avatarPreview').attr('src', e.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 提交表單
+        $('#profileForm').submit(function (e) {
+            e.preventDefault();
+            updateProfile();
+        });
+    }
+
+    // 打開個人資料模態窗口
+    function openProfileModal() {
+        // 獲取當前用戶資料
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+
+        // 填充表單
+        $('#txtUserName').val(userInfo.userName);
+        $('#txtBio').val(userInfo.bio || '');
+        $('#txtBirthday').val(userInfo.birthday.split('T')[0] || '');
+        $(`input[name="rdoGender"][value="${userInfo.gender || 'M'}"]`).prop('checked', true);
+        $('#avatarPreview').attr('src', userInfo.userImage || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ48JWGkSOWJegd_jiLj6C5cz-Ityd6OMLR-w&s');
+
+        // 顯示模態窗口
+        $('#profileEditModal').removeClass('hidden');
+    }
+
+    // 更新個人資料
+    async function updateProfile() {
+        try {
+            const displayName = $('#txtUserName').val().trim();
+            const bio = $('#txtBio').val().trim();
+            const gender = $('input[name="rdoGender"]:checked').val();
+            const avatarFile = $('#avatarInput')[0].files[0];
+            const birthday = $("#txtBirthday").val();
+
+            if (!displayName) {
+                errorAlert('請輸入顯示名稱');
+                return;
+            }
+
+            // 準備表單數據
+            const formData = new FormData();
+            formData.append('userName', displayName);
+            formData.append('bio', bio);
+            formData.append('gender', gender);
+            formData.append('birthday', birthday);
+
+            if (avatarFile) {
+                formData.append('userImage', avatarFile);
+            }
+
+            // 發送請求
+            const response = await $.ajax({
+                url: '/api/user/updateProfile',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false
+            });
+
+            if (response.success) {
+                // 更新本地存儲的用戶信息
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+                userInfo.userName = displayName;
+                userInfo.bio = bio;
+                userInfo.gender = gender;
+                userInfo.birthday = birthday;
+
+                if (response.data.userImage) {
+                    userInfo.userImage = response.data.userImage;
+                }
+
+                if (localStorage.getItem('userInfo')) {
+                    localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                } else {
+                    sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+                }
+
+                // 更新 UI
+                $('.user-profile .user-details h3').text(displayName);
+                $('.user-profile .bio').text(bio || '新增個人狀態...');
+                $('#imgUserImage').attr('src', userInfo.userImage);
+
+                // 關閉模態窗口
+                $('#profileEditModal').addClass('hidden');
+
+                // 顯示成功提示
+                successAlert('個人資料已更新');
+            } else {
+                errorAlert('更新失敗：' + response.message);
+            }
+        } catch (error) {
+            errorAlert(`更新個人資料失敗!`);
+        }
+    }
+</script>

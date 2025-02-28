@@ -277,6 +277,95 @@ namespace Chatman.Controllers
                 return StatusCode(500, ServiceResponse<bool>.ServerError());
             }
         }
+
+        [HttpPost("api/user/updateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileRequest request)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                UserInfo userInfo = await _userService.GetUserByIdAsync(user.UserId);
+                if (userInfo == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "查無用戶資料"
+                    });
+                }
+
+                userInfo.UserName = request.UserName;
+                userInfo.Gender = request.Gender;
+                userInfo.Birthday = request.Birthday;
+                userInfo.Bio = request.Bio;
+                userInfo.UpdateDate = DateTime.Now;
+                userInfo.UpdateUserId = userInfo.UserId;
+
+                // 處理頭像上傳
+                string uploadedFilePath = "";
+                if (request.UserImage != null && request.UserImage.Length > 0)
+                {
+                    // 處理文件保存路徑
+                    string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "user_images");
+                    Directory.CreateDirectory(uploadsFolder); // 確保目錄存在
+
+                    // 生成唯一文件名
+                    string uniqueFileName = $"{userInfo.UserId.ToString()}_{Guid.NewGuid()}{Path.GetExtension(request.UserImage.FileName)}";
+                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    uploadedFilePath = filePath; // 記錄文件路徑，以便在失敗時刪除
+
+                    // 保存文件
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await request.UserImage.CopyToAsync(fileStream);
+                    }
+
+                    // 設置用戶頭像路徑
+                    userInfo.UserImage = $"/uploads/user_images/{uniqueFileName}";
+                }
+
+                var response = await _userService.UpdateProfileAsync(userInfo);
+
+                if (response.Success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        data = new { userImage = userInfo.UserImage }
+                    });
+                }
+                else
+                {
+                    if (uploadedFilePath != null && System.IO.File.Exists(uploadedFilePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(uploadedFilePath);
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            _logger.LogError(deleteEx, $"刪除未使用的頭像文件失敗: {userInfo.UserImage}");
+                        }
+                    }
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Update ProFile failed");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
         #endregion
 
         #region //Delete

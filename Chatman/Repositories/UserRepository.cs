@@ -27,7 +27,7 @@ namespace Chatman.Repositories
             try
             {
                 sql = @"SELECT UserId, UserName, Email, Password, Gender, 
-                                Birthday, Status, Bio, UserImage
+                                FORMAT(Birthday, 'yyyy-MM-dd') Birthday, Status, Bio, UserImage
                                 , CreateDate, UpdateDate, CreateUserId, UpdateUserId
                         FROM BAS.UserInfo 
                         WHERE Email = @Email";
@@ -375,6 +375,32 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating user: {NotificationId}", notification.NotificationId);
+
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateProfileAsync(UserInfo user, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"UPDATE BAS.UserInfo 
+                        SET UserName = @UserName,
+                            Bio = @Bio,
+                            Gender = @Gender,
+                            Birthday = @Birthday,
+                            UserImage = @UserImage,
+                            UpdateDate = @UpdateDate,
+                            UpdateUserId = @UpdateUserId
+                        WHERE UserId = @UserId";
+
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, user);
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating user: {UserId}", user.UserId);
 
                 return false;
             }
