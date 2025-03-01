@@ -9,6 +9,7 @@ namespace Chatman.Interfaces
         Task<ServiceResponse<List<MessageResponse>>> GetChatHistoryAsync(int userId, int friendId, int pageSize, int pageNumber);
         Task<int> GetUnreadMessagesCountAsync(int userId);
         Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId);
+        Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsAsync(int userId);
         #endregion
 
         #region //Add

@@ -18,5 +18,9 @@
   {
     "outputFile": "wwwroot/css/profile.css",
     "inputFile": "wwwroot/css/profile.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/message_page.css",
+    "inputFile": "wwwroot/css/message_page.scss"
   }
 ]

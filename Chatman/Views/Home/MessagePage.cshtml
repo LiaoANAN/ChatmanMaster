@@ -1,0 +1,440 @@
+﻿<link rel="stylesheet" href="~/css/message_page.min.css" />
+
+<!-- 訊息列表頁面 - 作為覆蓋層 -->
+<div id="message-list-page" class="message-list-page">
+    <!-- 頁面標題 -->
+    <div class="page-header">
+        <h3>訊息</h3>
+        <div class="header-actions">
+            <button class="header-btn" id="btnNewMessage" title="新訊息">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="header-btn" id="btnCloseMessages" title="關閉">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 搜尋欄 -->
+    <div class="search-container">
+        <i class="fas fa-search"></i>
+        <input type="text" id="txtMessageSearch" placeholder="搜尋對話...">
+    </div>
+
+    <!-- 訊息列表 -->
+    <div class="messages-list-container">
+        <!-- 列表內容將動態生成 -->
+    </div>
+
+    <!-- 沒有訊息時的提示 -->
+    <div class="empty-messages hidden">
+        <i class="fas fa-comments"></i>
+        <p>目前沒有任何訊息</p>
+        <button class="start-chat-btn">開始聊天</button>
+    </div>
+</div>
+
+<script>
+    $(document).click(function (e) {
+        const $messageListPage = $('#message-list-page');
+        if ($messageListPage.hasClass('active') &&
+            !$(e.target).closest('#message-list-page').length &&
+            !$(e.target).closest('.action-btn i.fa-comment').length &&
+            !$(e.target).closest('.action-btn i.fa-comment').parent().length) {
+            hideMessageList();
+        }
+    });
+
+    // 初始化訊息列表功能
+    function initializeMessageListPage() {
+        // 載入訊息列表
+        loadMessageList();
+
+        // 註冊訊息按鈕點擊事件
+        $('.action-btn i.fa-comment').parent().click(function (e) {
+            e.stopPropagation();
+            toggleMessageList();
+        });
+
+        // 關閉按鈕點擊事件
+        $('#btnCloseMessages').click(function () {
+            hideMessageList();
+        });
+
+        // 搜尋功能
+        $('#txtMessageSearch').on('input', function () {
+            const keyword = $(this).val().trim().toLowerCase();
+            filterMessageList(keyword);
+        });
+
+        // 點擊新訊息按鈕
+        $('#btnNewMessage').click(function () {
+            // 打開聯絡人列表或顯示新增好友對話框
+            $('#addFriendModal').removeClass('hidden');
+        });
+
+        // 點擊開始聊天按鈕
+        $('.start-chat-btn').click(function () {
+            $('#addFriendModal').removeClass('hidden');
+        });
+
+        // 點擊外部區域關閉訊息列表
+        $(document).click(function (e) {
+            if ($('#message-list-page').hasClass('active') &&
+                !$(e.target).closest('#message-list-page').length &&
+                !$(e.target).closest('.action-btn i.fa-comment').length) {
+                hideMessageList();
+            }
+        });
+
+        $('#message-list-page').on('click', function (e) {
+            e.stopPropagation();
+        });
+    }
+
+    function openChatRoomByList(e) {
+        const friendId = $(e).data('id');
+        const friendName = $(e).data('name');
+
+        // 找到對應的好友項目並點擊它
+        const friendItem = $(`.friend-item[data-id="${friendId}"]`);
+        if (friendItem.length) {
+            // 隱藏訊息列表
+            hideMessageList();
+
+            // 點擊好友項目
+            friendItem.click();
+
+            // 標記該好友的訊息為已讀
+            markMessagesAsRead(friendId);
+
+            // 更新訊息列表中的未讀狀態
+            updateMessageItemReadStatus(friendId);
+
+            $('.popup-menu').removeClass('active');
+        } else {
+            // 如果在好友列表中找不到，可能需要先加載好友資料
+            console.warn('找不到對應的好友項目:', friendId, friendName);
+        }
+    }
+
+    // 顯示/隱藏訊息列表
+    function toggleMessageList() {
+        console.log('Toggling message list');
+        const $messageListPage = $('#message-list-page');
+
+        if ($messageListPage.hasClass('active')) {
+            hideMessageList();
+        } else {
+            showMessageList();
+        }
+    }
+
+    // 顯示訊息列表
+    function showMessageList() {
+        console.log('Showing message list');
+        const $messageListPage = $('#message-list-page');
+
+        // 先確保元素可見性
+        $messageListPage.css('visibility', 'visible');
+
+        // 添加激活類別
+        $messageListPage.addClass('active');
+        $('.action-btn:has(i.fa-comment)').addClass('active');
+
+        // 防止背景捲動在手機版
+        if (window.innerWidth <= 768) {
+            $('body').css('overflow', 'hidden');
+        }
+
+        // 更新訊息列表
+        loadMessageList();
+    }
+
+    // 隱藏訊息列表
+    function hideMessageList() {
+        console.log('Hiding message list');
+        const $messageListPage = $('#message-list-page');
+
+        // 移除激活類別
+        $messageListPage.removeClass('active');
+        $('.action-btn:has(i.fa-comment)').removeClass('active');
+
+        // 恢復背景捲動
+        $('body').css('overflow', '');
+
+        // 設置一個延遲後再隱藏元素，等待轉場動畫完成
+        setTimeout(function () {
+            if (!$messageListPage.hasClass('active')) {
+                $messageListPage.css('visibility', 'hidden');
+            }
+        }, 300); // 與CSS過渡時間相同
+    }
+
+    // 載入訊息列表
+    async function loadMessageList() {
+        try {
+            const response = await $.ajax({
+                url: '/api/chat/recentChats',
+                type: 'GET'
+            });
+
+            if (response.success) {
+                renderMessageList(response.data);
+            } else {
+                console.error('載入訊息列表失敗:', response.message);
+            }
+        } catch (error) {
+            console.error('載入訊息列表時發生錯誤:', error);
+        }
+    }
+
+    // 渲染訊息列表
+    function renderMessageList(messages) {
+        const $container = $('.messages-list-container');
+        $container.empty();
+
+        if (!messages || messages.length === 0) {
+            // 沒有訊息，顯示空狀態
+            $('.empty-messages').removeClass('hidden');
+            return;
+        }
+
+        // 隱藏空狀態
+        $('.empty-messages').addClass('hidden');
+
+        // 渲染每個訊息項目
+        messages.forEach(message => {
+            const formattedTime = formatMessageTime(new Date(message.createDate));
+            const isUnread = message.unreadCount > 0;
+
+            const $messageItem = $(`
+                    <div class="message-item ${isUnread ? 'unread' : ''}" data-id="${message.friendId}" data-name="${message.friendName}" onclick="openChatRoomByList(this)">
+                    <div class="message-avatar">
+                        <img src="${message.friendImage}" alt="${message.friendName}">
+                        <span class="status-dot ${message.isOnline ? 'online' : 'offline'}"></span>
+                    </div>
+                    <div class="message-content message-list-content">
+                        <div class="message-header">
+                            <h4 class="message-name">${message.friendName}</h4>
+                            <span class="message-time">${formattedTime}</span>
+                        </div>
+                        <div class="message-preview">
+                            ${message.messageType === 'image' ? '[圖片]' : message.content}
+                        </div>
+                    </div>
+                    ${message.unreadCount > 0 ? `<div class="unread-badge message-list-unread-badge">${message.unreadCount}</div>` : ''}
+                </div>
+            `);
+
+            $container.append($messageItem);
+        });
+
+        // 更新導航欄上的未讀訊息計數
+        updateUnreadMessageBadge(messages);
+    }
+
+    // 更新未讀訊息徽章
+    function updateUnreadMessageBadge(messages) {
+        if (!messages) return;
+
+        // 計算總未讀訊息數
+        const totalUnread = messages.reduce((sum, msg) => sum + (msg.unreadCount || 0), 0);
+
+        const $messageBtn = $('.action-btn i.fa-comment').parent();
+        const $badge = $messageBtn.find('.notification-badge');
+
+        if (totalUnread > 0) {
+            if ($badge.length) {
+                $badge.text(totalUnread);
+            } else {
+                $messageBtn.append(`<span class="notification-badge">${totalUnread}</span>`);
+            }
+        } else {
+            $badge.remove();
+        }
+    }
+
+    // 格式化訊息時間
+    function formatMessageTime(date) {
+        if (!date || isNaN(date.getTime())) {
+            return '';
+        }
+
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000); // 秒數差異
+
+        // 今天
+        if (date.toDateString() === now.toDateString()) {
+            const hours = date.getHours().toString().padStart(2, '0');
+            const mins = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${mins}`;
+        }
+        // 昨天
+        else if (
+            new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString() ===
+            date.toDateString()
+        ) {
+            return '昨天';
+        }
+        // 本週內
+        else if (diff < 604800) { // 7天內
+            const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            return days[date.getDay()];
+        }
+        // 更早
+        else {
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${month}/${day}`;
+        }
+    }
+
+    // 根據關鍵字過濾訊息列表
+    function filterMessageList(keyword) {
+        if (!keyword) {
+            // 如果關鍵字為空，顯示所有訊息
+            $('.message-item').show();
+            return;
+        }
+
+        // 根據關鍵字過濾
+        $('.message-item').each(function () {
+            const friendName = $(this).data('name').toLowerCase();
+            const messagePreview = $(this).find('.message-preview').text().toLowerCase();
+
+            if (friendName.includes(keyword) || messagePreview.includes(keyword)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+
+    // 當接收到新訊息時更新列表
+    function updateMessageListWithNewMessage(message) {
+        // 檢查訊息列表中是否已有該用戶
+        const $existingItem = $(`.message-item[data-id="${message.senderId}"]`);
+
+        if ($existingItem.length) {
+            // 已存在，更新最後訊息和時間
+            const previewText = message.messageType === 'image' ? '[圖片]' : message.messageContent;
+            $existingItem.find('.message-preview').text(previewText);
+            $existingItem.find('.message-time').text(formatMessageTime(new Date(message.createDate)));
+
+            // 如果不是當前選中的聊天，增加未讀計數
+            const isCurrentChat = $('.friend-item.selected').data('id') === message.senderId;
+            if (!isCurrentChat) {
+                let $badge = $existingItem.find('.unread-badge');
+                let count = parseInt($badge.text() || '0') + 1;
+
+                if ($badge.length) {
+                    $badge.text(count);
+                } else {
+                    $existingItem.append(`<div class="unread-badge">1</div>`);
+                }
+
+                // 添加未讀樣式
+                $existingItem.addClass('unread');
+            }
+
+            // 將該項目移到列表頂部
+            $existingItem.prependTo('.messages-list-container');
+        } else {
+            // 不存在，需要獲取用戶信息並創建新項目
+            getUserInfo(message.senderId).then(userInfo => {
+                const previewText = message.messageType === 'image' ? '[圖片]' : message.messageContent;
+                const newMessageItem = `
+                    <div class="message-item unread" data-id="${message.senderId}" data-name="${userInfo.userName}">
+                        <div class="message-avatar">
+                            <img src="${userInfo.avatar}" alt="${userInfo.userName}">
+                            <span class="status-dot ${userInfo.isOnline ? 'online' : 'offline'}"></span>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <h4 class="message-name">${userInfo.userName}</h4>
+                                <span class="message-time">${formatMessageTime(new Date(message.createDate))}</span>
+                            </div>
+                            <div class="message-preview">
+                                ${previewText}
+                            </div>
+                        </div>
+                        <div class="unread-badge">1</div>
+                    </div>
+                `;
+
+                // 插入到列表頂部
+                $('.messages-list-container').prepend(newMessageItem);
+
+                // 如果當前顯示的是空狀態，隱藏它
+                $('.empty-messages').addClass('hidden');
+            }).catch(error => {
+                console.error('獲取用戶信息失敗:', error);
+            });
+        }
+
+        // 更新導航欄上的未讀訊息計數
+        updateTotalUnreadCount();
+    }
+
+    // 更新總未讀數
+    function updateTotalUnreadCount() {
+        let totalUnread = 0;
+
+        // 計算所有訊息項目的未讀數
+        $('.message-item .unread-badge').each(function () {
+            totalUnread += parseInt($(this).text() || '0');
+        });
+
+        // 更新導航欄上的未讀數
+        const $messageBtn = $('.action-btn i.fa-comment').parent();
+        const $badge = $messageBtn.find('.notification-badge');
+
+        if (totalUnread > 0) {
+            if ($badge.length) {
+                $badge.text(totalUnread);
+            } else {
+                $messageBtn.append(`<span class="notification-badge">${totalUnread}</span>`);
+            }
+        } else {
+            $badge.remove();
+        }
+    }
+
+    // 標記訊息為已讀
+    function updateMessageItemReadStatus(friendId) {
+        const $messageItem = $(`.message-item[data-id="${friendId}"]`);
+        if ($messageItem.length) {
+            $messageItem.removeClass('unread');
+            $messageItem.find('.unread-badge').remove();
+
+            // 更新總未讀數
+            updateTotalUnreadCount();
+        }
+    }
+
+    // 模擬獲取用戶信息的函數
+    async function getUserInfo(userId) {
+        // 在實際應用中，這應該是一個API調用
+        // 這裡我們先從好友列表中尋找
+        const $friend = $(`.friend-item[data-id="${userId}"]`);
+
+        if ($friend.length) {
+            return {
+                userId: $friend.data('id'),
+                userName: $friend.data('name') || $friend.find('.friend-name').text(),
+                avatar: $friend.find('img').attr('src'),
+                isOnline: $friend.find('.status-dot').hasClass('online')
+            };
+        }
+
+        // 如果在好友列表中找不到，可能需要從服務器獲取
+        // 這裡先返回一個模擬數據
+        return {
+            userId: userId,
+            userName: '未知用戶',
+            avatar: 'https://via.placeholder.com/48',
+            isOnline: false
+        };
+    }
+</script>

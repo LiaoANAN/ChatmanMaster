@@ -39,6 +39,7 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Get
+        #region //取得特定好友歷史聊天訊息
         [HttpGet("api/chat/history")]
         public async Task<IActionResult> GetChatHistory(int friendId, int pageSize = 20, int pageNumber = 1)
         {
@@ -59,6 +60,7 @@ namespace Chatman.Controllers
                 return StatusCode(500, ServiceResponse<List<MessageResponse>>.ServerError());
             }
         }
+        #endregion
 
         #region //取得未讀訊息總數
         [HttpGet("api/chat/unreadCount")]
@@ -96,7 +98,7 @@ namespace Chatman.Controllers
         }
         #endregion
 
-        #region //取得未讀訊息總數()
+        #region //取得未讀訊息總數(From Friend)
         [HttpGet("api/chat/unreadCountFromFriend")]
         public async Task<IActionResult> GetUnReadCountFromFriend(int friendId)
         {
@@ -128,6 +130,34 @@ namespace Chatman.Controllers
                     success = false,
                     message = ex.Message
                 });
+            }
+        }
+        #endregion
+
+        #region //取得未讀訊息總數(From Friend)
+        [HttpGet("api/chat/recentChats")]
+        public async Task<IActionResult> GetRecentChats()
+        {
+            try
+            {
+                UserInfo user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var response = await _chatService.GetRecentChatsAsync(user.UserId);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取得聊天紀錄列表發生錯誤!");
+                return StatusCode(500, ServiceResponse<List<RecentChatsResponse>>.ServerError());
             }
         }
         #endregion

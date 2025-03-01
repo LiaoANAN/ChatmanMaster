@@ -185,6 +185,9 @@
 <!--個人資料編輯-->
 @Html.Partial("ProFile")
 
+<!--訊息列表畫面-->
+@Html.Partial("MessagePage")
+
 @section Scripts {
     <script>
         // SignalR 連接
@@ -223,6 +226,9 @@
 
             // 初始化個人基本資料修改功能
             initializeProfileEdit();
+
+            //初始化訊息列表模組
+            initializeMessageListPage();
         });
 
         function initializeChat() {
@@ -639,6 +645,11 @@
                 const offlineCount = $('#friends-list .list-group:eq(1) .friend-item').length;
                 $('#friends-list .list-group:eq(1) h4').text(`離線好友 (${offlineCount})`);
             }
+
+            // 接收新訊息時更新列表
+            connection.on("ReceiveMessage", function (message) {
+                updateMessageListWithNewMessage(message);
+            });
         }
 
         // 顯示 Toast 通知

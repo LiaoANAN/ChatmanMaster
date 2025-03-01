@@ -1,5 +1,6 @@
 ﻿using Chatman.Interfaces;
 using Chatman.Models;
+using Chatman.Models.DTOs;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -87,6 +88,68 @@ namespace Chatman.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "獲取未讀訊息數量時發生錯誤: {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<List<RecentChatsResponse>> GetRecentChatsAsync(int userId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"WITH RecentMessages AS (
+                            SELECT 
+                                m.*,
+                                ROW_NUMBER() OVER (PARTITION BY 
+                                    CASE 
+                                        WHEN SenderId = @UserId THEN ReceiverId 
+                                        ELSE SenderId 
+                                    END 
+                                    ORDER BY CreateDate DESC) AS RowNum
+                            FROM CHAT.Message m
+                            WHERE (SenderId = @UserId OR ReceiverId = @UserId)
+                            AND IsDelete = 0
+                        )
+                        SELECT 
+                            rm.MessageId,
+                            rm.MessageType,
+                            rm.Content,
+                            rm.MediaUrl,
+                            rm.IsRead,
+                            rm.CreateDate,
+                            -- 確定對話的另一方
+                            CASE 
+                                WHEN rm.SenderId = @UserId THEN rm.ReceiverId
+                                ELSE rm.SenderId
+                            END AS FriendId,
+                            -- 計算該用戶的未讀訊息數量
+                            (SELECT COUNT(*) 
+                             FROM CHAT.Message 
+                             WHERE SenderId = CASE WHEN rm.SenderId = @UserId THEN rm.ReceiverId ELSE rm.SenderId END
+                             AND ReceiverId = @UserId 
+                             AND IsRead = 0
+                             AND IsDelete = 0) AS UnreadCount,
+                            -- 獲取好友的用戶信息
+                            u.UserName FriendName,
+                            u.UserImage FriendImage
+                        FROM RecentMessages rm
+                        INNER JOIN BAS.UserInfo u ON 
+                            CASE 
+                                WHEN rm.SenderId = @UserId THEN rm.ReceiverId
+                                ELSE rm.SenderId
+                            END = u.UserId
+                        WHERE RowNum = 1
+                        ORDER BY rm.CreateDate DESC;";
+
+                var recentChats = await sqlConnection.QueryAsync<RecentChatsResponse>(sql, new
+                {
+                    UserId = userId,
+                });
+
+                return recentChats.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤: {userId}", userId);
                 throw;
             }
         }

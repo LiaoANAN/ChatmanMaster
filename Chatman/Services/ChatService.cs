@@ -116,6 +116,23 @@ namespace Chatman.Services
                 return 0;
             }
         }
+
+        public async Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsAsync(int userId)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    var recentChats = await _chatRepository.GetRecentChatsAsync(userId, sqlConnection);
+                    return ServiceResponse<List<RecentChatsResponse>>.ExcuteSuccess(recentChats);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取最近聊天資料時異常: {UserId}", userId);
+                return ServiceResponse<List<RecentChatsResponse>>.ServerError();
+            }
+        }
         #endregion
 
         #region //Add
