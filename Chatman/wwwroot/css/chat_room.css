@@ -494,6 +494,21 @@
   color: #374151;
 }
 
+.message.highlight {
+  animation: highlight-pulse 1.5s ease;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    background-color: rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
 /* 響應式調整 */
 @media (max-width: 768px) {
   .chat-header {

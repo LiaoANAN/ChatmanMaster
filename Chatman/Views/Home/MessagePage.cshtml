@@ -62,9 +62,13 @@
         });
 
         // 搜尋功能
+        let searchTimeout;
         $('#txtMessageSearch').on('input', function () {
+            clearTimeout(searchTimeout);
             const keyword = $(this).val().trim().toLowerCase();
-            filterMessageList(keyword);
+            searchTimeout = setTimeout(() => {
+                filterMessageList(keyword);
+            }, 500);
         });
 
         // 點擊新訊息按鈕
@@ -79,13 +83,13 @@
         });
 
         // 點擊外部區域關閉訊息列表
-        $(document).click(function (e) {
-            if ($('#message-list-page').hasClass('active') &&
-                !$(e.target).closest('#message-list-page').length &&
-                !$(e.target).closest('.action-btn i.fa-comment').length) {
-                hideMessageList();
-            }
-        });
+        // $(document).click(function (e) {
+        //     if ($('#message-list-page').hasClass('active') &&
+        //         !$(e.target).closest('#message-list-page').length &&
+        //         !$(e.target).closest('.action-btn i.fa-comment').length) {
+        //         hideMessageList();
+        //     }
+        // });
 
         $('#message-list-page').on('click', function (e) {
             e.stopPropagation();
@@ -93,8 +97,19 @@
     }
 
     function openChatRoomByList(e) {
-        const friendId = $(e).data('id');
-        const friendName = $(e).data('name');
+        let friendId = $(e).data('id');
+        let friendName = $(e).data('name');
+        let messageId = $(e).data('message-id');
+        let senderId = $(e).data('sender-id');
+
+        // 獲取當前用戶ID
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+        const currentUserId = userInfo?.userId;
+
+        // 檢查是否是與自己的對話
+        if (friendId == currentUserId) {
+            friendId = senderId;
+        }
 
         // 找到對應的好友項目並點擊它
         const friendItem = $(`.friend-item[data-id="${friendId}"]`);
@@ -112,9 +127,42 @@
             updateMessageItemReadStatus(friendId);
 
             $('.popup-menu').removeClass('active');
+
+            // 滾動到特定訊息位置 (如果有指定messageId)
+            if (messageId && senderId) {
+                // 使用 setTimeout 以確保聊天室及訊息已載入
+                setTimeout(() => {
+                    scrollToMessage(messageId);
+                }, 500);
+            }
         } else {
             // 如果在好友列表中找不到，可能需要先加載好友資料
             console.warn('找不到對應的好友項目:', friendId, friendName);
+        }
+    }
+
+    // 滾動到特定訊息
+    function scrollToMessage(messageId) {
+        const $message = $(`.message[data-message-id="${messageId}"]`);
+
+        if ($message.length) {
+            // 找到訊息元素，滾動到其位置
+            const $messagesContainer = $('.messages-container');
+            const messageTop = $message.position().top;
+
+            // 滾動到訊息位置，留一些空間在上方
+            $messagesContainer.scrollTop(messageTop - 100);
+
+            // 可選：高亮顯示該訊息片刻
+            $message.addClass('highlight');
+            setTimeout(() => {
+                $message.removeClass('highlight');
+            }, 1500);
+        } else {
+            // 如果找不到特定訊息，可能是因為它不在當前載入的聊天記錄中
+            // 這時可以載入更多歷史訊息或直接滾動到底部
+            console.log('找不到指定訊息，滾動到最新訊息');
+            scrollToBottom();
         }
     }
 
@@ -133,6 +181,8 @@
     // 顯示訊息列表
     function showMessageList() {
         console.log('Showing message list');
+        $("#txtMessageSearch").val("");
+
         const $messageListPage = $('#message-list-page');
 
         // 先確保元素可見性
@@ -209,7 +259,7 @@
             const isUnread = message.unreadCount > 0;
 
             const $messageItem = $(`
-                    <div class="message-item ${isUnread ? 'unread' : ''}" data-id="${message.friendId}" data-name="${message.friendName}" onclick="openChatRoomByList(this)">
+                    <div class="message-item ${isUnread ? 'unread' : ''}" data-id="${message.friendId}" data-name="${message.friendName}" data-message-id="${message.messageId}" data-sender-id="${message.senderId}" onclick="openChatRoomByList(this)">
                     <div class="message-avatar">
                         <img src="${message.friendImage}" alt="${message.friendName}">
                         <span class="status-dot ${message.isOnline ? 'online' : 'offline'}"></span>
@@ -291,24 +341,26 @@
     }
 
     // 根據關鍵字過濾訊息列表
-    function filterMessageList(keyword) {
+    async function filterMessageList(keyword) {
         if (!keyword) {
-            // 如果關鍵字為空，顯示所有訊息
-            $('.message-item').show();
-            return;
+            loadMessageList();
+            return false;
         }
 
-        // 根據關鍵字過濾
-        $('.message-item').each(function () {
-            const friendName = $(this).data('name').toLowerCase();
-            const messagePreview = $(this).find('.message-preview').text().toLowerCase();
+        try {
+            const response = await $.ajax({
+                url: `/api/chat/recentChatsByKeyword?keyword=${keyword}`,
+                type: 'GET'
+            });
 
-            if (friendName.includes(keyword) || messagePreview.includes(keyword)) {
-                $(this).show();
-            } else {
-                $(this).hide();
+            if (response.success) {
+                if (response.data.length > 0) {
+                    renderMessageList(response.data);
+                }
             }
-        });
+        } catch (error) {
+            console.error('載入訊息失敗：', error);
+        }
     }
 
     // 當接收到新訊息時更新列表

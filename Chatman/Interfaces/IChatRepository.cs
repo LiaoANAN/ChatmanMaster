@@ -11,6 +11,7 @@ namespace Chatman.Interfaces
         Task<int> GetUnreadMessagesCountAsync(int userId, SqlConnection sqlConnection);
         Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<List<RecentChatsResponse>> GetRecentChatsAsync(int userId, SqlConnection sqlConnection);
+        Task<List<RecentChatsResponse>> GetRecentChatsByKeywordAsync(string keyword, int userId, SqlConnection sqlConnection);
         #endregion
 
         #region //Add

@@ -307,7 +307,7 @@
         $('#chat-room').removeClass('hidden');
 
         // 載入聊天記錄
-        loadChatHistory(friendId);
+        loadChatHistory(friendId, true);
 
         // 在移動設備上，隱藏側邊欄
         if (window.innerWidth <= 768) {
@@ -491,6 +491,8 @@
                 const messageElement = $(messageDiv).find('.message');
                 messageElement.addClass(isSent ? 'sent' : 'received');
                 messageElement.attr('data-message-id', message.messageId);
+                messageElement.attr('data-is-read', message.isRead ? "true" : "false");
+                messageElement.attr('data-sender-id', message.senderId); // 添加發送者ID
 
                 // 設置頭像
                 if (!isSent) {
@@ -564,7 +566,7 @@
     }
 
     // 載入聊天記錄
-    async function loadChatHistory(friendId) {
+    async function loadChatHistory(friendId, scrollToUnread = false, targetMessageId = null) {
         currentFriendId = friendId;
         currentPage = 1;
         isLoading = true;
@@ -602,6 +604,16 @@
                     } else {
                         $('.load-more').removeClass('hidden');
                     }
+
+                    // 如果需要滾動到第一筆未讀訊息
+                    if (scrollToUnread) {
+                        setTimeout(() => {
+                            scrollToFirstUnreadMessage(userInfo.userId);
+                        }, 300);
+                    } else {
+                        // 否則滾動到底部
+                        scrollToBottom();
+                    }
                 } else {
                     console.log("沒有聊天記錄");
                     hasMoreMessages = false;
@@ -614,6 +626,68 @@
             console.error('獲取聊天記錄失敗：', error);
         } finally {
             isLoading = false;
+        }
+    }
+
+    // 滾動到第一筆未讀訊息
+    function scrollToFirstUnreadMessage(currentUserId) {
+        console.log("開始尋找第一筆未讀訊息，當前用戶ID：", currentUserId);
+
+        // 找到第一筆來自好友且未讀的訊息
+        // 篩選條件：不是當前用戶發送的 且 未讀的訊息
+        const $allMessages = $('.message');
+        let $firstUnreadMessage = null;
+
+        // 遍歷所有訊息，找到第一個未讀的訊息
+        $allMessages.each(function() {
+            const $message = $(this);
+            const senderId = $message.data('sender-id');
+            const isRead = $message.data('is-read') === true || $message.data('is-read') === "true";
+
+            // 確認這條訊息是好友發送的（不是自己發送的）且未讀
+            if (senderId != currentUserId && !isRead) {
+                $firstUnreadMessage = $message;
+                console.log("找到第一筆未讀訊息:", $message);
+                return false; // 跳出 each 循環
+            }
+        });
+
+        if ($firstUnreadMessage && $firstUnreadMessage.length) {
+            console.log("準備滾動到未讀訊息");
+
+            // 找到了未讀訊息
+            const $messagesContainer = $('.messages-container');
+
+            // 獲取相關元素的實際尺寸
+            const messageRect = $firstUnreadMessage[0].getBoundingClientRect();
+            const containerRect = $messagesContainer[0].getBoundingClientRect();
+
+            // 獲取訊息元素相對於容器的位置
+            const messageOffsetTop = $firstUnreadMessage.offset().top - $messagesContainer.offset().top;
+
+            // 計算需要滾動的位置：讓訊息在容器中間偏上位置
+            const scrollTo = $messagesContainer.scrollTop() + messageOffsetTop - (containerRect.height * 0.4);
+
+            console.log("滾動計算 - 訊息位置:", messageOffsetTop,
+                        "容器高度:", containerRect.height,
+                        "計算滾動位置:", scrollTo);
+
+            // 執行滾動
+            $messagesContainer.animate({
+                scrollTop: scrollTo
+            }, 300, function() {
+                console.log("滾動完成，最終位置:", $messagesContainer.scrollTop());
+
+                // 高亮顯示該訊息
+                $firstUnreadMessage.addClass('highlight');
+                setTimeout(() => {
+                    $firstUnreadMessage.removeClass('highlight');
+                }, 1500);
+            });
+        } else {
+            console.log("沒有找到未讀訊息，滾動到底部");
+            // 沒有未讀訊息，滾動到底部
+            scrollToBottom();
         }
     }
 

@@ -7,6 +7,7 @@ namespace Chatman.Models.DTOs
     public class RecentChatsResponse
     {
         public int MessageId { get; set; }
+        public int SenderId { get; set; }
         public int FriendId { get; set; }
         public string FriendName { get; set; }
         public string FriendImage { get; set; }

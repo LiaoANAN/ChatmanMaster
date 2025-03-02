@@ -489,7 +489,7 @@
             });
 
             // 搜尋功能的實作
-            $('.search-container input').on('input', function () {
+            $('#txtFriendNameQ').on('input', function () {
                 // 取得搜尋文字並轉為小寫
                 const searchTerm = $(this).val().toLowerCase().trim();
 
@@ -502,7 +502,7 @@
 
                 // 根據搜尋條件顯示或隱藏好友
                 $('.friend-item').each(function () {
-                    const friendName = $(this).data('name');
+                    const friendName = $(this).find('.friend-name').text().toLowerCase();
                     if (friendName.includes(searchTerm)) {
                         $(this).show(); // 名字符合搜尋條件的顯示
                     } else {

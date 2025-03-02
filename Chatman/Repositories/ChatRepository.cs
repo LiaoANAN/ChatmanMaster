@@ -153,6 +153,32 @@ namespace Chatman.Repositories
                 throw;
             }
         }
+
+        public async Task<List<RecentChatsResponse>> GetRecentChatsByKeywordAsync(string keyword, int userId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.CreateDate
+                        , b.UserId FriendId, b.UserName FriendName, b.UserImage FriendImage
+                        FROM CHAT.Message a 
+                        INNER JOIN BAS.UserInfo b ON a.ReceiverId = b.UserId
+                        WHERE (a.SenderId = @UserId OR a.ReceiverId = @UserId)
+                        AND Content LIKE @keyword";
+
+                var recentChats = await sqlConnection.QueryAsync<RecentChatsResponse>(sql, new
+                {
+                    UserId = userId,
+                    Keyword = $"%{keyword}%",
+                });
+
+                return recentChats.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤: {userId}", userId);
+                throw;
+            }
+        }
         #endregion
 
         #region //Add

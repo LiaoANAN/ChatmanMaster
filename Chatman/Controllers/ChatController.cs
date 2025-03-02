@@ -134,7 +134,7 @@ namespace Chatman.Controllers
         }
         #endregion
 
-        #region //取得未讀訊息總數(From Friend)
+        #region //取得近期聊天紀錄
         [HttpGet("api/chat/recentChats")]
         public async Task<IActionResult> GetRecentChats()
         {
@@ -151,6 +151,34 @@ namespace Chatman.Controllers
                 }
 
                 var response = await _chatService.GetRecentChatsAsync(user.UserId);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取得聊天紀錄列表發生錯誤!");
+                return StatusCode(500, ServiceResponse<List<RecentChatsResponse>>.ServerError());
+            }
+        }
+        #endregion
+
+        #region //取得近期聊天紀錄 By Keyword
+        [HttpGet("api/chat/recentChatsByKeyword")]
+        public async Task<IActionResult> GetRecentChatsByKeyword(string keyword)
+        {
+            try
+            {
+                UserInfo user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var response = await _chatService.GetRecentChatsByKeywordAsync(keyword, user.UserId);
 
                 return StatusCode(response.StatusCode, response);
             }
