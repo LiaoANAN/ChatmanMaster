@@ -11,6 +11,7 @@ namespace Chatman.Interfaces
         Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId);
         Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsAsync(int userId);
         Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsByKeywordAsync(string keyword, int userId);
+        Task<ServiceResponse<MessagePageResponse>> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize);
         #endregion
 
         #region //Add

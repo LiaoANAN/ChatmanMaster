@@ -150,6 +150,23 @@ namespace Chatman.Services
                 return ServiceResponse<List<RecentChatsResponse>>.ServerError();
             }
         }
+
+        public async Task<ServiceResponse<MessagePageResponse>> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    var messagePage = await _chatRepository.GetMessagePageAsync(userId, friendId, messageId, pageSize, sqlConnection);
+                    return ServiceResponse<MessagePageResponse>.ExcuteSuccess(messagePage);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取訊息頁數時錯誤: {messageId}", messageId);
+                return ServiceResponse<MessagePageResponse>.ServerError();
+            }
+        }
         #endregion
 
         #region //Add

@@ -189,6 +189,34 @@ namespace Chatman.Controllers
             }
         }
         #endregion
+
+        #region //取得訊息頁數
+        [HttpGet("api/chat/findMessagePage")]
+        public async Task<IActionResult> GetMessagePage(int friendId, int messageId, int pageSize)
+        {
+            try
+            {
+                UserInfo user = WebHelper.GetCurrentUser(this.HttpContext);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "用戶未登入"
+                    });
+                }
+
+                var response = await _chatService.GetMessagePageAsync(user.UserId, friendId, messageId, pageSize);
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取得訊息頁數發生錯誤!");
+                return StatusCode(500, ServiceResponse<MessagePageResponse>.ServerError());
+            }
+        }
+        #endregion
         #endregion
 
         #region //Add

@@ -179,6 +179,45 @@ namespace Chatman.Repositories
                 throw;
             }
         }
+
+        public async Task<MessagePageResponse> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"WITH MessageRanking AS (
+                            SELECT 
+                                m.MessageId,
+                                ROW_NUMBER() OVER (ORDER BY m.CreateDate DESC) AS RowNum
+                            FROM 
+                                CHAT.Message m
+                            WHERE 
+                                (m.SenderId = @UserId AND m.ReceiverId = @FriendId)
+                                OR (m.SenderId = @FriendId AND m.ReceiverId = @UserId)
+                        )
+                        SELECT 
+                            CEILING(CAST(RowNum AS FLOAT) / @PageSize) AS PageNumber,
+                            ((RowNum - 1) % @PageSize) + 1 AS PositionInPage
+                        FROM 
+                            MessageRanking
+                        WHERE 
+                            MessageId = @MessageId;";
+
+                var messagePage = await sqlConnection.QueryFirstOrDefaultAsync<MessagePageResponse>(sql, new
+                {
+                    UserId = userId,
+                    FriendId = friendId,
+                    PageSize = pageSize,
+                    MessageId = messageId
+                });
+
+                return messagePage;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤: {userId}", userId);
+                throw;
+            }
+        }
         #endregion
 
         #region //Add

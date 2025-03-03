@@ -113,12 +113,37 @@
 
         // 找到對應的好友項目並點擊它
         const friendItem = $(`.friend-item[data-id="${friendId}"]`);
+
         if (friendItem.length) {
             // 隱藏訊息列表
             hideMessageList();
 
-            // 點擊好友項目
-            friendItem.click();
+            // 更新聊天室信息（從好友項目獲取數據）
+            $('.chat-user-name').text(friendItem.find('.friend-name').text());
+            $('.chat-user-avatar').attr('src', friendItem.find('img').attr('src'));
+            $('.chat-user-status').text(friendItem.find('.status-dot').hasClass('online') ? '在線' : '離線');
+
+            // 隱藏歡迎訊息，顯示聊天室
+            $('#welcome-message').addClass('hidden');
+            $('#chat-room').removeClass('hidden');
+
+            // 在移動設備上，隱藏側邊欄
+            if (window.innerWidth <= 768) {
+                $('.sidebar').addClass('mobile-hidden');
+                $('.main-content').addClass('mobile-active');
+
+                if ($('.chat-header .back-button').length === 0) {
+                    $('.chat-header').prepend(
+                        '<button class="back-button chat-action-btn">' +
+                        '<i class="fas fa-arrow-left"></i>' +
+                        '</button>'
+                    );
+                }
+            }
+
+            // 標記該好友選中
+            $('.friend-item').removeClass('selected');
+            friendItem.addClass('selected');
 
             // 標記該好友的訊息為已讀
             markMessagesAsRead(friendId);
@@ -126,43 +151,23 @@
             // 更新訊息列表中的未讀狀態
             updateMessageItemReadStatus(friendId);
 
+            // 關閉所有彈出選單
             $('.popup-menu').removeClass('active');
 
-            // 滾動到特定訊息位置 (如果有指定messageId)
-            if (messageId && senderId) {
-                // 使用 setTimeout 以確保聊天室及訊息已載入
+            // 如果有指定訊息ID，使用修改後的載入函數直接跳轉到目標訊息
+            let keyword = $("#txtMessageSearch").val();
+            if (messageId && keyword.length > 0) {
+                loadChatHistory(friendId, false, messageId);
+            } else {
+                loadChatHistory(friendId, false);
+
                 setTimeout(() => {
-                    scrollToMessage(messageId);
+                    scrollToBottom();
                 }, 500);
             }
         } else {
             // 如果在好友列表中找不到，可能需要先加載好友資料
             console.warn('找不到對應的好友項目:', friendId, friendName);
-        }
-    }
-
-    // 滾動到特定訊息
-    function scrollToMessage(messageId) {
-        const $message = $(`.message[data-message-id="${messageId}"]`);
-
-        if ($message.length) {
-            // 找到訊息元素，滾動到其位置
-            const $messagesContainer = $('.messages-container');
-            const messageTop = $message.position().top;
-
-            // 滾動到訊息位置，留一些空間在上方
-            $messagesContainer.scrollTop(messageTop - 100);
-
-            // 可選：高亮顯示該訊息片刻
-            $message.addClass('highlight');
-            setTimeout(() => {
-                $message.removeClass('highlight');
-            }, 1500);
-        } else {
-            // 如果找不到特定訊息，可能是因為它不在當前載入的聊天記錄中
-            // 這時可以載入更多歷史訊息或直接滾動到底部
-            console.log('找不到指定訊息，滾動到最新訊息');
-            scrollToBottom();
         }
     }
 

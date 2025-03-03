@@ -451,15 +451,32 @@
     }
 
     // 渲染訊息
-    function renderMessages(messages) {
+    function renderMessages(messages, preserveScroll = false) {
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
         const messagesContainer = $('#messages-list');
 
-        // 清空容器
-        messagesContainer.empty();
+        // 如果需要保留滾動位置，記住當前的滾動信息
+        let scrollPosition = 0;
+        let scrollHeight = 0;
+        let containerHeight = 0;
+
+        if (preserveScroll) {
+            const $container = $('.messages-container');
+            scrollPosition = $container.scrollTop();
+            scrollHeight = $container[0].scrollHeight;
+            containerHeight = $container.height();
+        }
+
+        // 清空容器（除非要保留滾動位置）
+        if (!preserveScroll) {
+            messagesContainer.empty();
+        }
 
         // 按時間排序（從舊到新）
         messages.sort((a, b) => new Date(a.createDate) - new Date(b.createDate));
+
+        // 清空現有內容並添加排序後的訊息
+        //messagesContainer.empty();
 
         // 添加訊息到容器
         messages.forEach(message => {
@@ -512,7 +529,31 @@
         });
 
         // 滾動到底部
-        scrollToBottom();
+        //scrollToBottom();
+
+        // 如果需要保留滾動位置，恢復滾動位置
+        if (preserveScroll) {
+            const $container = $('.messages-container');
+            const newScrollHeight = $container[0].scrollHeight;
+
+            // 計算高度差並調整滾動位置
+            const heightDifference = newScrollHeight - scrollHeight;
+
+            // 有兩種策略：
+            // 1. 保持相對位置不變（用戶看到的內容保持不變）
+            $container.scrollTop(scrollPosition + heightDifference);
+
+            // 2. 維持視窗底部到滾動底部的距離（如果用戶已接近底部）
+            // 如果用戶接近底部，與底部保持相同距離
+            // const distanceFromBottom = scrollHeight - (scrollPosition + containerHeight);
+            // if (distanceFromBottom < 100) {
+            //     // 用戶在接近底部，保持與底部的距離
+            //     $container.scrollTop(newScrollHeight - containerHeight - distanceFromBottom);
+            // } else {
+            //     // 用戶不在底部，保持相對位置
+            //     $container.scrollTop(scrollPosition + heightDifference);
+            // }
+        }
     }
 
     // 添加訊息到聊天視窗
@@ -578,6 +619,23 @@
 
         try {
             console.log(`開始加載聊天記錄，friendId: ${friendId}`);
+
+            let messageFound = false;
+            //若需要搜尋訊息，則先取得訊息所在頁數
+            if (targetMessageId) {
+                const messagePageResponse = await $.ajax({
+                    url: `/api/chat/findMessagePage?friendId=${friendId}&messageId=${targetMessageId}&pageSize=20`,
+                    type: 'GET'
+                })
+
+                if (messagePageResponse.success && messagePageResponse.data) {
+                    currentPage = messagePageResponse.data.pageNumber;
+                    messageFound = true;
+                } else {
+                    console.warn(`無法找到目標訊息: ${targetMessageId}`);
+                }
+            }
+
             const response = await $.ajax({
                 url: `/api/chat/history?friendId=${friendId}&pageSize=20&pageNumber=${currentPage}`,
                 type: 'GET'
@@ -605,14 +663,48 @@
                         $('.load-more').removeClass('hidden');
                     }
 
-                    // 如果需要滾動到第一筆未讀訊息
-                    if (scrollToUnread) {
-                        setTimeout(() => {
-                            scrollToFirstUnreadMessage(userInfo.userId);
+                    // 根據情況決定滾動位置
+                    if (targetMessageId && messageFound) {
+                        addScrollTimer(() => {
+                            const $message = $(`.message[data-message-id="${targetMessageId}"]`);
+                            if ($message.length) {
+                                console.log(`找到訊息元素，準備滾動`);
+                                scrollToMessage(targetMessageId);
+                            } else {
+                                console.warn(`DOM中找不到訊息元素，ID: ${targetMessageId}`);
+                                // 再次嘗試，可能是渲染延遲
+                                addScrollTimer(() => {
+                                    const $retryMessage = $(`.message[data-message-id="${targetMessageId}"]`);
+                                    if ($retryMessage.length) {
+                                        scrollToMessage(targetMessageId);
+                                    } else {
+                                        console.error(`無法找到訊息元素，滾動到底部`);
+                                        if (!window.isScrollingToSpecificMessage) {
+                                            scrollToBottom();
+                                        }
+                                    }
+                                }, 1000);
+                            }
+                        }, 500);
+
+                        // 如果是較早的頁面，載入後續頁面以顯示最新訊息
+                        if (currentPage > 1) {
+                            addScrollTimer(() => {
+                                if (!window.isScrollingToSpecificMessage) {
+                                    loadLatestMessages(friendId, currentPage);
+                                }
+                            }, 3000);
+                        }
+                    } else if (scrollToUnread) {
+                        addScrollTimer(() => {
+                            if (!window.isScrollingToSpecificMessage) {
+                                scrollToFirstUnreadMessage(userInfo.userId);
+                            }
                         }, 300);
                     } else {
-                        // 否則滾動到底部
-                        scrollToBottom();
+                        if (!window.isScrollingToSpecificMessage) {
+                            scrollToBottom();
+                        }
                     }
                 } else {
                     console.log("沒有聊天記錄");
@@ -627,6 +719,115 @@
         } finally {
             isLoading = false;
         }
+    }
+
+    // 滾動到特定訊息
+    function scrollToMessage(messageId) {
+        // 取消所有可能影響滾動的計時器
+        clearAllScrollTimers();
+
+        // 添加一個標記，表示我們正在進行特定訊息滾動
+        window.isScrollingToSpecificMessage = true;
+
+        // 找到目標訊息元素
+        const $message = $(`.message[data-message-id="${messageId}"]`);
+
+        if ($message.length) {
+            console.log("找到目標訊息元素, ID:", messageId);
+
+            // 找到訊息容器
+            const $messagesContainer = $('.messages-container');
+
+            // 保存當前滾動位置
+            const currentScroll = $messagesContainer.scrollTop();
+
+            // 計算訊息元素相對於容器的位置
+            const messageOffset = $message.offset().top;
+            const containerOffset = $messagesContainer.offset().top;
+            const relativeOffset = messageOffset - containerOffset;
+
+            // 計算需要滾動的位置，讓訊息顯示在容器的 1/3 處
+            const containerHeight = $messagesContainer.height();
+            const targetPosition = currentScroll + relativeOffset - (containerHeight / 3);
+
+            console.log("滾動計算 - 當前位置:", currentScroll,
+                "訊息相對位置:", relativeOffset,
+                "目標位置:", targetPosition);
+
+            // 使用動畫滾動到目標位置
+            $messagesContainer.animate({
+                scrollTop: targetPosition
+            }, 300, function () {
+                console.log("滾動完成，位置:", $messagesContainer.scrollTop());
+
+                // 高亮顯示訊息
+                $message.addClass('highlight-message');
+
+                // 設置一個延時，在一段時間後移除高亮效果
+                setTimeout(() => {
+                    $message.removeClass('highlight-message');
+                    // 完成後清除標記
+                    window.isScrollingToSpecificMessage = false;
+                }, 3000);
+
+                // 阻止其他滾動事件一段時間
+                preventScrollEvents(3000);
+            });
+        } else {
+            console.warn("找不到目標訊息元素, ID:", messageId);
+            window.isScrollingToSpecificMessage = false;
+        }
+    }
+
+    // 阻止其他滾動事件
+    function preventScrollEvents(duration) {
+        window.preventScrollUntil = Date.now() + duration;
+    }
+
+    // 檢查是否應該阻止滾動事件
+    function shouldPreventScroll() {
+        return window.preventScrollUntil && Date.now() < window.preventScrollUntil;
+    }
+
+    // 清除所有可能影響滾動的計時器
+    function clearAllScrollTimers() {
+        // 清除任何可能存在的滾動計時器
+        if (window.scrollTimers) {
+            window.scrollTimers.forEach(timer => clearTimeout(timer));
+        }
+        window.scrollTimers = [];
+    }
+
+    // 安全添加計時器（替代 setTimeout）
+    function addScrollTimer(callback, delay) {
+        if (!window.scrollTimers) window.scrollTimers = [];
+        const timerId = setTimeout(() => {
+            // 執行回調前先檢查是否應該阻止滾動
+            if (!shouldPreventScroll() && !window.isScrollingToSpecificMessage) {
+                callback();
+            }
+        }, delay);
+        window.scrollTimers.push(timerId);
+        return timerId;
+    }
+
+    function highlightMessage($message) {
+        // 先移除所有訊息的高亮效果
+        $('.message').removeClass('highlight-message');
+
+        // 添加高亮效果到目標訊息
+        $message.addClass('highlight-message');
+
+        // 播放高亮動畫
+        $message.css('animation', 'none');
+        // 觸發reflow
+        void $message[0].offsetWidth;
+        $message.css('animation', 'highlight-pulse 1.5s ease');
+
+        // 設定計時器，在一段時間後移除高亮效果
+        setTimeout(() => {
+            $message.removeClass('highlight-message');
+        }, 3000);
     }
 
     // 滾動到第一筆未讀訊息
@@ -688,6 +889,61 @@
             console.log("沒有找到未讀訊息，滾動到底部");
             // 沒有未讀訊息，滾動到底部
             scrollToBottom();
+        }
+    }
+
+    // 載入最新訊息（用於確保在查看舊訊息後仍能看到最新對話）
+    async function loadLatestMessages(friendId, startPage) {
+        try {
+            console.log(`載入最新訊息，從第1頁到第${startPage - 1}頁`);
+
+            // 記住滾動位置
+            const $messagesContainer = $('.messages-container');
+            const scrollPosition = $messagesContainer.scrollTop();
+            const scrollHeight = $messagesContainer[0].scrollHeight;
+
+            // 從第1頁開始載入到指定的頁面前一頁
+            for (let page = 1; page < startPage; page++) {
+                const response = await $.ajax({
+                    url: `/api/chat/history?friendId=${friendId}&pageSize=20&pageNumber=${page}`,
+                    type: 'GET'
+                });
+
+                if (response.success && response.data.length > 0) {
+                    // 找出新的訊息（避免重複）
+                    const newMessages = response.data.filter(newMsg =>
+                        !messagesList.some(existingMsg => existingMsg.messageId === newMsg.messageId)
+                    );
+
+                    if (newMessages.length > 0) {
+                        console.log(`找到${newMessages.length}條新訊息`);
+
+                        // 記住當前的滾動高度，以便計算高度差
+                        const oldScrollHeight = $messagesContainer[0].scrollHeight;
+
+                        // 將新訊息加入列表並重新排序
+                        messagesList = [...messagesList, ...newMessages];
+                        messagesList.sort((a, b) => new Date(a.createDate) - new Date(b.createDate));
+
+                        // 更新DOM，但不影響滾動位置
+                        const shouldPreserveScroll = true;
+                        renderMessages(messagesList, shouldPreserveScroll);
+
+                        // 計算新的滾動位置，保持相對位置不變
+                        if (shouldPreserveScroll) {
+                            const newScrollHeight = $messagesContainer[0].scrollHeight;
+                            const heightDifference = newScrollHeight - oldScrollHeight;
+
+                            // 調整滾動位置，保持用戶當前查看的內容在視窗中的相對位置
+                            $messagesContainer.scrollTop(scrollPosition + heightDifference);
+
+                            console.log(`調整滾動位置: ${scrollPosition} -> ${scrollPosition + heightDifference}`);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('載入最新訊息失敗：', error);
         }
     }
 

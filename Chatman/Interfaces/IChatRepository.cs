@@ -1,6 +1,7 @@
 ﻿using Chatman.Models;
 using Chatman.Models.DTOs;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration.UserSecrets;
 
 namespace Chatman.Interfaces
 {
@@ -12,6 +13,7 @@ namespace Chatman.Interfaces
         Task<int> GetUnreadMessagesCountFromFriendAsync(int userId, int friendId, SqlConnection sqlConnection);
         Task<List<RecentChatsResponse>> GetRecentChatsAsync(int userId, SqlConnection sqlConnection);
         Task<List<RecentChatsResponse>> GetRecentChatsByKeywordAsync(string keyword, int userId, SqlConnection sqlConnection);
+        Task<MessagePageResponse> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize, SqlConnection sqlConnection);
         #endregion
 
         #region //Add
