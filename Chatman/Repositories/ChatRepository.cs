@@ -161,7 +161,7 @@ namespace Chatman.Repositories
                 sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.CreateDate
                         , b.UserId FriendId, b.UserName FriendName, b.UserImage FriendImage
                         FROM CHAT.Message a 
-                        INNER JOIN BAS.UserInfo b ON a.ReceiverId = b.UserId
+                        INNER JOIN BAS.UserInfo b ON a.SenderId = b.UserId
                         WHERE (a.SenderId = @UserId OR a.ReceiverId = @UserId)
                         AND Content LIKE @keyword";
 
