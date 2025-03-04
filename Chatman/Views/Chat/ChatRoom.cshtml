@@ -117,6 +117,14 @@
 </template>
 
 <script>
+    // 初始化變數
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMoreMessages = true;
+    let currentFriendId = null;
+    let hasLoadedAllNewerMessages = true;
+    let isFirstNewerLoad = true;
+
     function initializeChatRoom() {
         // 監聽接收訊息事件
         connection.on("ReceiveMessage", function (message) {
@@ -157,6 +165,10 @@
             $('#fileInput').click();
         });
 
+        $('#btnLoadMore').click(function () {
+            loadMoreMessages();
+        });
+
         // 檢查元素是否存在
         const $messageInput = $('#messageInput');
         if ($messageInput.length === 0) {
@@ -165,12 +177,6 @@
         const $btnSend = $('#btnSend');
         const $messagesList = $('#messages-list');
         const $messagesContainer = $('.messages-container');
-
-        // 初始化變數
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMoreMessages = true;
-        let currentFriendId = null;
 
         // 自動調整高度
         function adjustTextareaHeight() {
@@ -243,8 +249,37 @@
         });
 
         // 添加滾動事件監聽
+        let getMessageTimeout;
         $messagesContainer.on('scroll', function () {
-            if ($messagesContainer.scrollTop() <= 50 && !isLoading && hasMoreMessages) {
+            clearTimeout(getMessageTimeout);
+
+            // 防止同時觸發多次載入
+            if (shouldPreventScroll() || window.isScrollingToSpecificMessage) return;
+
+            const container = $(this);
+            const scrollPosition = container.scrollTop();
+            const scrollHeight = container[0].scrollHeight;
+            const containerHeight = container.height();
+
+            // 調整判斷條件，使用更靈敏的觸發機制
+            // 當距離底部非常接近時（例如小於容器高度的 20%）就觸發
+            const isNearBottom = (scrollHeight - scrollPosition - containerHeight) < (containerHeight * 0.2);
+
+            if (isNearBottom && currentFriendId && hasLoadedAllNewerMessages) {
+                // 找最後一筆訊息的ID
+                const lastMessage = $('.message').last();
+                const lastMessageId = lastMessage.data('message-id');
+
+                if (lastMessageId) {
+                    const pageSize = isFirstNewerLoad ? 5 : 20;
+                    getMessageTimeout = setTimeout(() => {
+                        loadNewerMessages(currentFriendId, lastMessageId, pageSize);
+                    }, 1500);
+                }
+            }
+
+            // 向上載入舊訊息的邏輯保持不變
+            if (scrollPosition <= 50 && !isLoading && hasMoreMessages) {
                 loadMoreMessages();
             }
         });
@@ -296,6 +331,7 @@
         const friendName = friendElement.find('.friend-name').text();
         const friendAvatar = friendElement.find('img').attr('src');
         const isOnline = friendElement.find('.status-dot').hasClass('online');
+        currentFriendId = friendId;
 
         // 更新聊天室信息
         $('.chat-user-name').text(friendName);
@@ -357,7 +393,6 @@
             }
         } else {
             // 處理文字訊息
-            // 使用 SignalR 發送訊息
             connection.invoke("SendMessage", {
                 senderId: userInfo.userId,
                 receiverId: friendId,
@@ -390,6 +425,25 @@
 
         // 調整輸入框高度
         messageInput.css('height', 'auto');
+
+        // 自動滾動到底部
+        setTimeout(() => {
+            loadChatHistory(friendId, false);
+        }, 500); // 給一些時間讓訊息發送完成
+    }
+
+    // 確保有這個函數用於滾動到底部
+    function scrollToBottom(smooth = true) {
+        const container = $('.messages-container');
+        const scrollHeight = container[0].scrollHeight;
+
+        if (smooth) {
+            container.animate({
+                scrollTop: scrollHeight
+            }, 200);
+        } else {
+            container.scrollTop(scrollHeight);
+        }
     }
 
     // 上傳圖片
@@ -612,6 +666,8 @@
         currentPage = 1;
         isLoading = true;
         hasMoreMessages = true;
+        hasMoreNewerMessages = true;
+        isFirstNewerLoad = true;
 
         // 清空訊息列表
         $('#messages-list').empty();
@@ -988,6 +1044,78 @@
             }
         } catch (error) {
             console.error('載入更多訊息失敗：', error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // 載入更新的訊息（往下滑時加載更新的消息）
+    async function loadNewerMessages(friendId, lastMessageId, pageSize) {
+        if (isLoading) {
+            console.log('正在加载中，跳过新消息加载');
+            return;
+        }
+
+        console.log(`开始加载更新消息：friendId=${friendId}, lastMessageId=${lastMessageId}, pageSize=${pageSize}`);
+
+        isLoading = true;
+
+        try {
+            const response = await $.ajax({
+                url: `/api/chat/newer?friendId=${friendId}&lastMessageId=${lastMessageId}&pageSize=${pageSize}`,
+                type: 'GET'
+            });
+
+            console.log('加载更新消息的响应:', response);
+
+            if (response.success && response.data && response.data.length > 0) {
+                // 找出新的消息（避免重复）
+                const newMessages = response.data.filter(newMsg =>
+                    !messagesList.some(existingMsg => existingMsg.messageId === newMsg.messageId)
+                );
+
+                console.log(`找到${newMessages.length}条新消息`);
+
+                if (newMessages.length > 0) {
+                    const $messagesContainer = $('.messages-container');
+                    const oldScrollHeight = $messagesContainer[0].scrollHeight;
+                    const scrollPosition = $messagesContainer.scrollTop();
+                    const containerHeight = $messagesContainer.height();
+
+                    // 将新消息加入列表并重新排序
+                    messagesList = [...messagesList, ...newMessages];
+                    messagesList.sort((a, b) => new Date(a.createDate) - new Date(b.createDate));
+
+                    // 更新DOM，保持滚动位置
+                    renderMessages(messagesList, true);
+
+                    // 计算新的滚动位置，保持相对位置不变
+                    const newScrollHeight = $messagesContainer[0].scrollHeight;
+                    const heightDifference = newScrollHeight - oldScrollHeight;
+
+                    // 调整滚动位置，让用户视角保持不变
+                    $messagesContainer.scrollTop(scrollPosition + heightDifference);
+
+                    // 如果返回的消息数量少于请求的数量，表示没有更多新消息
+                    if (response.data.length < pageSize) {
+                        hasMoreNewerMessages = false;
+                        console.log('没有更多新消息');
+                    }
+
+                    // 第一次加载后，后续加载使用完整页面大小
+                    isFirstNewerLoad = false;
+                } else {
+                    // 没有新的消息
+                    hasMoreNewerMessages = false;
+                    console.log('没有新的消息');
+                }
+            } else {
+                // 没有新的消息
+                hasMoreNewerMessages = false;
+                console.log('没有新的消息');
+            }
+        } catch (error) {
+            console.error('加载更新消息失败：', error);
         } finally {
             isLoading = false;
         }

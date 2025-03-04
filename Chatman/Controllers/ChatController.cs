@@ -217,6 +217,29 @@ namespace Chatman.Controllers
             }
         }
         #endregion
+
+        #region //取得特定好友歷史聊天訊息
+        [HttpGet("api/chat/newer")]
+        public async Task<IActionResult> GetNewerMessages(int friendId, int lastMessageId, int pageSize = 20)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(HttpContext);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "用戶未登入" });
+                }
+
+                var response = await _chatService.GetNewerMessagesAsync(user.UserId, friendId, lastMessageId, pageSize);
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤");
+                return StatusCode(500, ServiceResponse<List<MessageResponse>>.ServerError());
+            }
+        }
+        #endregion
         #endregion
 
         #region //Add

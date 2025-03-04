@@ -1,5 +1,6 @@
 ﻿using Chatman.Models;
 using Chatman.Models.DTOs;
+using Microsoft.Data.SqlClient;
 
 namespace Chatman.Interfaces
 {
@@ -12,6 +13,7 @@ namespace Chatman.Interfaces
         Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsAsync(int userId);
         Task<ServiceResponse<List<RecentChatsResponse>>> GetRecentChatsByKeywordAsync(string keyword, int userId);
         Task<ServiceResponse<MessagePageResponse>> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize);
+        Task<ServiceResponse<List<MessageResponse>>> GetNewerMessagesAsync(int userId, int friendId, int lastMessageId, int pageSize);
         #endregion
 
         #region //Add

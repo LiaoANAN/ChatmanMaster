@@ -218,6 +218,49 @@ namespace Chatman.Repositories
                 throw;
             }
         }
+
+        public async Task<List<ChatMessage>> GetNewerMessagesAsync(int userId, int friendId, int lastMessageId, int pageSize, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"SELECT TOP (@PageSize) 
+                        m.MessageId,
+                        m.SenderId,
+                        m.ReceiverId,
+                        m.Content,
+                        m.MessageType,
+                        m.CreateDate,
+                        ui.UserName AS SenderName,
+                        ui.UserImage AS SenderAvatar,
+                        CASE 
+                            WHEN m.SenderId = m.ReceiverId THEN 0 
+                            WHEN m.SenderId = @UserId THEN 1 
+                            ELSE 0 
+                        END AS IsRead
+                        FROM CHAT.Message m
+                        INNER JOIN BAS.UserInfo ui ON m.SenderId = ui.UserId
+                        WHERE 
+                            ((m.SenderId = @UserId AND m.ReceiverId = @FriendId) 
+                             OR (m.SenderId = @FriendId AND m.ReceiverId = @UserId))
+                            AND m.MessageId > @LastMessageId
+                        ORDER BY m.CreateDate ASC";
+
+                var messages = await sqlConnection.QueryAsync<ChatMessage>(sql, new
+                {
+                    PageSize = pageSize,
+                    UserId = userId,
+                    FriendId = friendId,
+                    LastMessageId = lastMessageId
+                });
+
+                return messages.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤: {UserId}, {FriendId}", userId, friendId);
+                throw;
+            }
+        }
         #endregion
 
         #region //Add

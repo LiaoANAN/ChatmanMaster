@@ -167,6 +167,62 @@ namespace Chatman.Services
                 return ServiceResponse<MessagePageResponse>.ServerError();
             }
         }
+
+        public async Task<ServiceResponse<List<MessageResponse>>> GetNewerMessagesAsync(int userId, int friendId, int lastMessageId, int pageSize)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = _db.CreateConnection())
+                {
+                    // 取得聊天記錄
+                    var chatHistory = await _chatRepository.GetNewerMessagesAsync(userId, friendId, lastMessageId, pageSize, sqlConnection);
+
+                    if (chatHistory == null || chatHistory.Count == 0)
+                    {
+                        return ServiceResponse<List<MessageResponse>>.ExcuteSuccess(new List<MessageResponse>(), "沒有聊天記錄");
+                    }
+
+                    // 將未讀訊息標記為已讀
+                    if (!await _chatRepository.UpdateMessagesAsReadAsync(friendId, userId, sqlConnection))
+                    {
+                        ServiceResponse<List<MessageResponse>>.ExcuteError("將訊息已讀時錯誤!");
+                    }
+
+                    // 取得發送者資訊
+                    var senderIds = chatHistory.Select(m => m.SenderId).Distinct().ToList();
+                    var senderInfo = new Dictionary<int, UserInfo>();
+
+                    foreach (var senderId in senderIds)
+                    {
+                        var user = await _userService.GetUserByIdAsync(senderId);
+                        if (user != null)
+                        {
+                            senderInfo[senderId] = user;
+                        }
+                    }
+
+                    // 轉換為 MessageResponse
+                    var messageResponses = chatHistory.Select(m => new MessageResponse
+                    {
+                        MessageId = m.MessageId,
+                        SenderId = m.SenderId,
+                        SenderName = senderInfo.ContainsKey(m.SenderId) ? senderInfo[m.SenderId].UserName : "未知用戶",
+                        SenderAvatar = senderInfo.ContainsKey(m.SenderId) ? senderInfo[m.SenderId].UserImage : "",
+                        Content = m.Content,
+                        MessageType = m.MessageType,
+                        CreateDate = m.CreateDate,
+                        IsRead = m.IsRead
+                    }).ToList();
+
+                    return ServiceResponse<List<MessageResponse>>.ExcuteSuccess(messageResponses);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "獲取聊天記錄時發生錯誤: {UserId}, {FriendId}", userId, friendId);
+                return ServiceResponse<List<MessageResponse>>.ServerError();
+            }
+        }
         #endregion
 
         #region //Add

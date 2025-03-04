@@ -186,7 +186,7 @@
     // 顯示訊息列表
     function showMessageList() {
         console.log('Showing message list');
-        $("#txtMessageSearch").val("");
+        //$("#txtMessageSearch").val("");
 
         const $messageListPage = $('#message-list-page');
 
@@ -203,7 +203,10 @@
         }
 
         // 更新訊息列表
-        loadMessageList();
+        let keyword = $('#txtMessageSearch').val();
+        if (keyword.length <= 0){
+            loadMessageList();
+        }
     }
 
     // 隱藏訊息列表

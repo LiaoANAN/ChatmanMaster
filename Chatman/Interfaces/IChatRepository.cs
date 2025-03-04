@@ -14,6 +14,7 @@ namespace Chatman.Interfaces
         Task<List<RecentChatsResponse>> GetRecentChatsAsync(int userId, SqlConnection sqlConnection);
         Task<List<RecentChatsResponse>> GetRecentChatsByKeywordAsync(string keyword, int userId, SqlConnection sqlConnection);
         Task<MessagePageResponse> GetMessagePageAsync(int userId, int friendId, int messageId, int pageSize, SqlConnection sqlConnection);
+        Task<List<ChatMessage>> GetNewerMessagesAsync(int userId, int friendId, int lastMessageId, int pageSize, SqlConnection sqlConnection);
         #endregion
 
         #region //Add
