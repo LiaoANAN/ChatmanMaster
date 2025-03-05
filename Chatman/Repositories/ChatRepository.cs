@@ -158,8 +158,8 @@ namespace Chatman.Repositories
         {
             try
             {
-                sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.CreateDate
-                        , b.UserId FriendId, b.UserName FriendName, b.UserImage FriendImage
+                sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.ReceiverId FriendId, a.CreateDate
+                        , b.UserName FriendName, b.UserImage FriendImage
                         FROM CHAT.Message a 
                         INNER JOIN BAS.UserInfo b ON a.SenderId = b.UserId
                         WHERE (a.SenderId = @UserId OR a.ReceiverId = @UserId)

@@ -320,7 +320,6 @@
         }
 
         const now = new Date();
-        const diff = Math.floor((now - date) / 1000); // 秒數差異
 
         // 今天
         if (date.toDateString() === now.toDateString()) {
@@ -335,16 +334,26 @@
         ) {
             return '昨天';
         }
-        // 本週內
-        else if (diff < 604800) { // 7天內
-            const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            return days[date.getDay()];
-        }
-        // 更早
         else {
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${month}/${day}`;
+            // 計算當前週起始日 (週日)
+            const nowWeekStart = new Date(now);
+            nowWeekStart.setDate(now.getDate() - now.getDay()); // 設為本週週日
+            nowWeekStart.setHours(0, 0, 0, 0); // 設為零點
+
+            // 檢查訊息日期是否是本週的
+            const isThisWeek = date >= nowWeekStart;
+
+            if (isThisWeek) {
+                // 是本週內的訊息，顯示星期幾
+                const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                return days[date.getDay()];
+            } else {
+                // 不是本週的，顯示完整日期
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}/${month}/${day}`;
+            }
         }
     }
 

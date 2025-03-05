@@ -509,6 +509,145 @@
     background-color: transparent;
   }
 }
+/* 圖片查看器樣式 */
+/* 圖片查看器樣式 */
+.modal#imageViewerModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 2000; /* 提高整體z-index */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal#imageViewerModal.hidden {
+  display: none;
+}
+
+.image-viewer-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.image-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2010; /* 確保頭部在最上層 */
+}
+
+.image-title {
+  font-size: 1rem;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.image-viewer-container .close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  z-index: 2020; /* 確保關閉按鈕最上層 */
+  padding: 8px 24px; /* 增大點擊區域 */
+}
+
+.image-viewer-container .close-btn:hover {
+  color: #f3f4f6;
+}
+
+.image-viewer-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#fullscreenImage {
+  max-width: 90%;
+  max-height: 80%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+  transform-origin: center center;
+  cursor: grab;
+  z-index: 2005; /* 確保圖片在適當層級 */
+}
+
+#fullscreenImage.zoomed {
+  cursor: move;
+}
+
+#fullscreenImage.grabbing {
+  cursor: grabbing;
+}
+
+.image-viewer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2010; /* 確保控制欄在最上層 */
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.25rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  z-index: 2015; /* 確保按鈕位於適當層級 */
+}
+
+.control-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.image-viewer-container {
+  animation: fadeIn 0.3s ease;
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
   .chat-header {
@@ -589,6 +728,21 @@
     .messages-container {
       padding-bottom: 90px; /* Slightly more padding for iOS */
     }
+  }
+  .image-viewer-controls {
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  .control-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  .image-title {
+    font-size: 0.875rem;
+  }
+  .image-viewer-container .close-btn {
+    padding: 12px 20px; /* 在移動設備上增大點擊區域 */
   }
 }
 /* 空聊天室提示 */

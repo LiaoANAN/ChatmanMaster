@@ -7,6 +7,7 @@ using Chatman.Models.DTOs;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using System.Net.Http.Headers;
 
 namespace Chatman.Controllers
 {
@@ -16,15 +17,18 @@ namespace Chatman.Controllers
         private readonly IChatService _chatService;
         private readonly ILogger<ChatController> _logger;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IWebHostEnvironment _hostingEnvironment;
 
         public ChatController(
             IChatService chatService,
             ILogger<ChatController> logger,
-            IHubContext<ChatHub> hubContext)
+            IHubContext<ChatHub> hubContext,
+            IWebHostEnvironment hostingEnvironment)
         {
             _chatService = chatService;
             _logger = logger;
             _hubContext = hubContext;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         #region //View
@@ -243,7 +247,80 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Add
+        #region //上傳圖片
+        [HttpPost("api/chat/uploadImage")]
+        public async Task<IActionResult> UploadImage()
+        {
+            try
+            {
+                var userInfo = WebHelper.GetCurrentUser(HttpContext);
+                if (userInfo == null)
+                {
+                    return BadRequest(new { success = false, message = "用戶未登入!" });
+                }
 
+                var receiverId = HttpContext.Request.Form["receiverId"];
+                if (string.IsNullOrEmpty(receiverId))
+                {
+                    return BadRequest(new { success = false, message = "缺少接收者ID" });
+                }
+
+                var file = Request.Form.Files[0];
+                if (file == null)
+                {
+                    return BadRequest(new { success = false, message = "缺少文件" });
+                }
+
+                // 檢查文件是否為圖片
+                if (!file.ContentType.StartsWith("image/"))
+                {
+                    return BadRequest(new { success = false, message = "僅支援圖片格式" });
+                }
+
+                // 檢查文件大小 (5MB上限)
+                if (file.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new { success = false, message = "圖片大小不能超過5MB" });
+                }
+
+                // 創建儲存路徑
+                string uploadsFolder = Path.Combine(_hostingEnvironment.WebRootPath, "uploads", "chat_images");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                // 生成唯一文件名
+                string uniqueFileName = $"{Guid.NewGuid()}_{ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"')}";
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                // 保存文件
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+
+                // 返回文件URL
+                string fileUrl = $"/uploads/chat_images/{uniqueFileName}";
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "圖片上傳成功",
+                    data = new
+                    {
+                        url = fileUrl,
+                        fileName = uniqueFileName
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "上傳圖片失敗");
+                return StatusCode(500, new { success = false, message = "上傳圖片時發生錯誤" });
+            }
+        }
+        #endregion
         #endregion
 
         #region //Update

@@ -116,6 +116,33 @@
     </div>
 </template>
 
+<!-- 圖片查看器模態框 -->
+<div id="imageViewerModal" class="modal hidden">
+    <div class="image-viewer-container">
+        <div class="image-viewer-header">
+            <span class="image-title"></span>
+            <button class="close-btn" id="closeImageViewer">&times;</button>
+        </div>
+        <div class="image-viewer-content">
+            <img src="" alt="全螢幕圖片" id="fullscreenImage">
+        </div>
+        <div class="image-viewer-controls">
+            <button class="control-btn" id="zoomOutBtn" title="縮小">
+                <i class="fas fa-search-minus"></i>
+            </button>
+            <button class="control-btn" id="zoomResetBtn" title="重設">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="control-btn" id="zoomInBtn" title="放大">
+                <i class="fas fa-search-plus"></i>
+            </button>
+            <button class="control-btn" id="downloadBtn" title="下載">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     // 初始化變數
     let currentPage = 1;
@@ -163,6 +190,35 @@
         // 註冊附件按鈕點擊事件
         $('#btnAttachment').click(function() {
             $('#fileInput').click();
+        });
+
+        // 註冊檔案選擇事件
+        $('#fileInput').on('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 檢查是否為圖片
+            if (!file.type.startsWith('image/')) {
+                alert('請選擇圖片檔案');
+                $(this).val(''); // 清空選擇
+                return;
+            }
+
+            // 檢查檔案大小 (5MB 上限)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('圖片大小不能超過 5MB');
+                $(this).val(''); // 清空選擇
+                return;
+            }
+
+            // 預覽選擇的圖片
+            previewImage(file);
+        });
+
+        // 移除預覽按鈕事件
+        $('#removePreview').click(function () {
+            $('#filePreview').addClass('hidden');
+            $('#fileInput').val(''); // 清空檔案選擇
         });
 
         $('#btnLoadMore').click(function () {
@@ -293,6 +349,8 @@
         });
 
         initializeMobileChatView();
+
+        initializeImageViewer();
     }
 
     function initializeMobileChatView() {
@@ -519,6 +577,8 @@
                 const messageElement = $(messageDiv).find('.message');
                 messageElement.addClass(isSent ? 'sent' : 'received');
                 messageElement.attr('data-message-id', message.messageId);
+                messageElement.attr('data-is-read', message.isRead ? "true" : "false");
+                messageElement.attr('data-sender-id', message.senderId); // 添加發送者ID
 
                 // 設置頭像
                 if (!isSent) {
@@ -848,7 +908,6 @@
             const $message = $(this);
             const senderId = $message.data('sender-id');
             const isRead = $message.data('is-read') === true || $message.data('is-read') === "true";
-
             // 確認這條訊息是好友發送的（不是自己發送的）且未讀
             if (senderId != currentUserId && !isRead) {
                 $firstUnreadMessage = $message;
@@ -1071,7 +1130,6 @@
         }
 
         const now = new Date();
-        const diff = Math.floor((now - date) / 1000); // 差異秒數
 
         // 檢查是否為同一天
         const isSameDay =
@@ -1084,27 +1142,32 @@
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${hours}:${minutes}`;
-        } else if (diff < 86400 * 7) { // 一週內
-            // 顯示星期幾
-            const dayNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dayName = dayNames[date.getDay()];
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${dayName} ${hours}:${minutes}`;
         } else {
-            // 超過一週，顯示完整日期
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
+            // 計算當前週起始日 (週日)
+            const nowWeekStart = new Date(now);
+            nowWeekStart.setDate(now.getDate() - now.getDay()); // 設為本週週日
+            nowWeekStart.setHours(0, 0, 0, 0); // 設為零點
 
-            // 如果是去年或更早的消息，顯示年份
-            if (date.getFullYear() < now.getFullYear()) {
-                return `${year}/${month}/${day} ${hours}:${minutes}`;
+            // 檢查訊息日期是否是本週的
+            const isThisWeek = date >= nowWeekStart;
+
+            if (isThisWeek) {
+                // 是本週內的訊息，顯示星期幾
+                const dayNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                const dayName = dayNames[date.getDay()];
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${dayName} ${hours}:${minutes}`;
             } else {
-                // 當年的消息不顯示年份
-                return `${month}/${day} ${hours}:${minutes}`;
+                // 不是本週的，顯示完整日期
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+
+                // 顯示完整西元年日期格式 (YYYY/MM/DD HH:MM)
+                return `${year}/${month}/${day} ${hours}:${minutes}`;
             }
         }
     }
@@ -1146,5 +1209,225 @@
         } catch (error) {
             console.error('獲取好友未讀訊息數量失敗：', error);
         }
+    }
+
+    // 初始化圖片查看器
+    function initializeImageViewer() {
+        // 全局變量
+        let currentZoom = 1;
+        let isDragging = false;
+        let startX, startY;
+        let translateX = 0, translateY = 0;
+        const MIN_ZOOM = 0.5;
+        const MAX_ZOOM = 3;
+        const ZOOM_STEP = 0.2;
+
+        // 為所有訊息圖片添加點擊事件
+        $(document).on('click', '.message-image img', function (e) {
+            e.preventDefault();
+
+            // 獲取原始圖片URL
+            const imgSrc = $(this).attr('src');
+
+            // 設置全屏圖片
+            $('#fullscreenImage').attr('src', imgSrc);
+
+            // 重設縮放和位置
+            resetZoom();
+
+            // 顯示圖片名稱（從URL中提取）
+            const fileName = imgSrc.split('/').pop();
+            $('.image-title').text(fileName);
+
+            // 顯示模態框
+            $('#imageViewerModal').removeClass('hidden').addClass('image-viewer-modal');
+
+            // 綁定下載按鈕
+            $('#downloadBtn').off('click').on('click', function () {
+                downloadImage(imgSrc, fileName);
+            });
+        });
+
+        // 關閉模態框 - 修正版本
+        $(document).on('click', '#closeImageViewer', function () {
+            console.log("test");
+            $('#imageViewerModal').addClass('hidden').removeClass('image-viewer-modal');
+        });
+
+        // 點擊背景也關閉模態框（但不關閉圖片區域）- 修正版本
+        $(document).on('click', '#imageViewerModal', function (e) {
+            if (e.target === this) {
+                $(this).addClass('hidden').removeClass('image-viewer-modal');
+            }
+        });
+
+        // 確保事件不會重複綁定
+        $(document).off('keydown.imageViewer').on('keydown.imageViewer', function (e) {
+            if ($('#imageViewerModal').hasClass('image-viewer-modal')) {
+                switch (e.which) {
+                    case 27: // ESC
+                        $('#imageViewerModal').addClass('hidden').removeClass('image-viewer-modal');
+                        break;
+                    // ... 其他按鍵處理保持不變 ...
+                }
+            }
+        });
+
+        // 縮放按鈕
+        $('#zoomInBtn').click(function () {
+            zoomImage(ZOOM_STEP);
+        });
+
+        $('#zoomOutBtn').click(function () {
+            zoomImage(-ZOOM_STEP);
+        });
+
+        $('#zoomResetBtn').click(function () {
+            resetZoom();
+        });
+
+        // 拖動圖片功能 - 鼠標事件
+        $('#fullscreenImage').mousedown(function (e) {
+            if (currentZoom > 1) {
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                $(this).addClass('grabbing');
+            }
+        });
+
+        $(document).mouseup(function () {
+            isDragging = false;
+            $('#fullscreenImage').removeClass('grabbing');
+        });
+
+        $(document).mousemove(function (e) {
+            if (isDragging) {
+                const newTranslateX = e.clientX - startX;
+                const newTranslateY = e.clientY - startY;
+                translateX = newTranslateX;
+                translateY = newTranslateY;
+                $('#fullscreenImage').css('transform', `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`);
+            }
+        });
+
+        // 縮放圖片函數
+        function zoomImage(step) {
+            const oldZoom = currentZoom;
+            currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom + step));
+
+            // 如果縮放級別有變化
+            if (oldZoom !== currentZoom) {
+                $('#fullscreenImage').css('transform', `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`);
+
+                // 縮放級別大於1時添加縮放標記，否則移除
+                if (currentZoom > 1) {
+                    $('#fullscreenImage').addClass('zoomed');
+                } else {
+                    $('#fullscreenImage').removeClass('zoomed');
+                    // 如果縮放小於或等於1，重置位置
+                    if (currentZoom <= 1) {
+                        translateX = 0;
+                        translateY = 0;
+                        $('#fullscreenImage').css('transform', `scale(${currentZoom})`);
+                    }
+                }
+            }
+        }
+
+        // 重設縮放和位置
+        function resetZoom() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            $('#fullscreenImage').css('transform', '').removeClass('zoomed grabbing');
+        }
+
+        // 下載圖片函數
+        function downloadImage(imgSrc, fileName) {
+            const link = document.createElement('a');
+            link.href = imgSrc;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 觸控支持 - 觸摸事件
+        const imageElement = document.getElementById('fullscreenImage');
+        let lastTouchDistance = 0;
+
+        imageElement.addEventListener('touchstart', function (e) {
+            if (e.touches.length === 1 && currentZoom > 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - translateX;
+                startY = e.touches[0].clientY - translateY;
+            } else if (e.touches.length === 2) {
+                // 雙指觸控，準備縮放
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+            }
+        });
+
+        imageElement.addEventListener('touchmove', function (e) {
+            e.preventDefault(); // 防止畫面滾動
+
+            if (isDragging && e.touches.length === 1) {
+                // 單指移動
+                const newTranslateX = e.touches[0].clientX - startX;
+                const newTranslateY = e.touches[0].clientY - startY;
+                translateX = newTranslateX;
+                translateY = newTranslateY;
+                imageElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+            } else if (e.touches.length === 2) {
+                // 雙指縮放
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+
+                if (lastTouchDistance > 0) {
+                    const distanceDifference = currentDistance - lastTouchDistance;
+                    const zoomStep = distanceDifference * 0.01;
+                    zoomImage(zoomStep);
+                }
+
+                lastTouchDistance = currentDistance;
+            }
+        });
+
+        imageElement.addEventListener('touchend', function () {
+            isDragging = false;
+            lastTouchDistance = 0;
+        });
+
+        // 支持鍵盤快捷鍵
+        $(document).keydown(function (e) {
+            if ($('#imageViewerModal').hasClass('image-viewer-modal')) {
+                switch (e.which) {
+                    case 27: // ESC
+                        $('#closeImageViewer').click();
+                        break;
+                    case 107: // + key
+                    case 187: // + key (with shift)
+                        $('#zoomInBtn').click();
+                        break;
+                    case 109: // - key
+                    case 189: // - key
+                        $('#zoomOutBtn').click();
+                        break;
+                    case 48: // 0 key
+                    case 96: // 0 key (numpad)
+                        $('#zoomResetBtn').click();
+                        break;
+                }
+            }
+        });
     }
 </script>
