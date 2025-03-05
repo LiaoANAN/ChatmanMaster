@@ -63,4 +63,4 @@
 #*.RTF   diff=astextplain
 
 /*uploads*/
-/wwwroot/uploads/
+wwwroot/uploads/
