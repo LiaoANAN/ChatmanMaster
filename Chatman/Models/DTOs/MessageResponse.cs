@@ -10,5 +10,8 @@
         public string MessageType { get; set; }
         public bool IsRead { get; set; }
         public DateTime CreateDate { get; set; }
+        public string FileName { get; set; }
+        public int FileSize { get; set; }
+        public string FileUrl { get; set; }
     }
 }

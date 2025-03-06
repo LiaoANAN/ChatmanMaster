@@ -35,7 +35,26 @@
     </div>
 
     <!-- 檔案預覽區域 -->
-    <div id="filePreview" class="file-preview hidden">
+    <div class="file-preview hidden">
+        <div class="preview-content">
+            <!-- 檔案預覽 -->
+            <div id="previewFile" class="hidden">
+                <div class="file-info">
+                    <i class="fas fa-file"></i>
+                    <span id="fileName">fileName.txt</span>
+                    <span id="fileSize">(123 KB)</span>
+                </div>
+            </div>
+
+            <div class="preview-actions">
+                <button class="preview-action-btn" id="btnCancelUpload">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="filePreview" class="file-preview hidden image-preview">
         <div class="preview-content">
             <img src="" alt="preview" id="previewImage">
             <div class="preview-actions">
@@ -49,10 +68,14 @@
     <!-- 輸入區域 -->
     <div class="input-area">
         <div class="input-container">
-            <button class="input-action-btn" id="btnAttachment" title="附加檔案">
+            <button class="input-action-btn" id="btnImageUpload" title="附加檔案">
+                <i class="fas fa-image"></i>
+            </button>
+            <button type="button" class="input-action-btn" id="btnFileUpload">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <input type="file" id="fileInput" class="hidden" accept="image/*">
+            <input type="file" id="imageInput" accept="image/*" class="hidden">
+            <input type="file" id="fileInput" class="hidden">
 
             <textarea id="messageInput"
                       placeholder="輸入訊息..."
@@ -188,12 +211,12 @@
         });
 
         // 註冊附件按鈕點擊事件
-        $('#btnAttachment').click(function() {
-            $('#fileInput').click();
+        $('#btnImageUpload').click(function() {
+            $('#imageInput').click();
         });
 
         // 註冊檔案選擇事件
-        $('#fileInput').on('change', function (e) {
+        $('#imageInput').on('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -218,7 +241,7 @@
         // 移除預覽按鈕事件
         $('#removePreview').click(function () {
             $('#filePreview').addClass('hidden');
-            $('#fileInput').val(''); // 清空檔案選擇
+            $('#imageInput').val(''); // 清空檔案選擇
         });
 
         $('#btnLoadMore').click(function () {
@@ -351,6 +374,8 @@
         initializeMobileChatView();
 
         initializeImageViewer();
+
+        initializeFileUpload();
     }
 
     function initializeMobileChatView() {
@@ -424,10 +449,16 @@
 
         if (hasFilePreview) {
             // 處理圖片訊息
-            const fileInput = $('#fileInput')[0];
+            const imageInput = $('#imageInput')[0];
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                uploadImage(file, friendId, userInfo);
+            }
+            // 處理檔案訊息
+            const fileInput = $("#fileInput")[0];
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
-                uploadImage(file, friendId, userInfo);
+                sendFileMessage(file, message);
             }
         } else {
             // 處理文字訊息
@@ -459,7 +490,7 @@
         // 清空輸入框和預覽
         messageInput.val('');
         $('#filePreview').addClass('hidden');
-        $('#fileInput').val('');
+        $('#imageInput').val('');
 
         // 調整輸入框高度
         messageInput.css('height', 'auto');
@@ -489,9 +520,10 @@
         const formData = new FormData();
         formData.append('file', file);
         formData.append('receiverId', friendId);
+        formData.append('fileType', "image");
 
         $.ajax({
-            url: '/api/chat/uploadImage',
+            url: '/api/chat/uploadFile',
             type: 'POST',
             data: formData,
             processData: false,
@@ -590,7 +622,11 @@
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 messagesContainer.append(messageElement);
-            } else {
+            }
+            else if (message.messageType === 'file'){
+
+            }
+            else {
                 // 文字訊息
                 const template = document.getElementById('message-template');
                 const messageDiv = document.importNode(template.content, true);
@@ -1250,7 +1286,6 @@
 
         // 關閉模態框 - 修正版本
         $(document).on('click', '#closeImageViewer', function () {
-            console.log("test");
             $('#imageViewerModal').addClass('hidden').removeClass('image-viewer-modal');
         });
 
@@ -1429,5 +1464,377 @@
                 }
             }
         });
+    }
+
+    // 初始化檔案上傳功能
+    function initializeFileUpload() {
+        // 綁定檔案上傳按鈕事件
+        $('#btnFileUpload').click(function () {
+            $('#fileInput').click();
+        });
+
+        // 處理檔案選擇
+        $('#fileInput').change(function (e) {
+            $("#imageInput").val("");
+            $('#filePreview').addClass('hidden');
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 檢查檔案大小上限 (例如 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                errorAlert('檔案過大', '請選擇小於 10MB 的檔案', 2000);
+                $(this).val(''); // 清空選擇
+                return;
+            }
+
+            // 顯示檔案預覽
+            showFilePreview(file);
+        });
+
+        // 取消上傳
+        $('#btnCancelUpload').click(function () {
+            cancelFileUpload();
+        });
+
+        // 發送訊息時處理檔案上傳
+        $('#btnSendMessage').click(function () {
+            const messageText = $('#messageInput').val().trim();
+            const fileInput = document.getElementById('fileInput');
+
+            const hasFile = fileInput.files.length > 0;
+            const hasMessage = messageText.length > 0;
+
+            // 如果沒有任何內容，不發送
+            if (!hasMessage && !hasImage && !hasFile) return;
+
+            // 先判斷是否有檔案或圖片要上傳
+            if (hasFile) {
+                sendFileMessage(fileInput.files[0], messageText);
+            } else if (hasMessage) {
+                sendTextMessage(messageText);
+            }
+
+            // 清空訊息輸入框並禁用發送按鈕
+            $('#messageInput').val('').focus();
+            $(this).prop('disabled', true);
+
+            // 清空檔案預覽
+            cancelFileUpload();
+        });
+    }
+
+    // 顯示檔案預覽
+    function showFilePreview(file) {
+        // 格式化檔案大小
+        const size = formatFileSize(file.size);
+
+        // 設置檔案資訊
+        $('#fileName').text(file.name);
+        $('#fileSize').text(`(${size})`);
+
+        // 顯示檔案預覽，隱藏圖片預覽
+        $('#previewFile').removeClass('hidden');
+        $('.file-preview').removeClass('hidden');
+
+        $('#previewImage').addClass('hidden');
+        $('#filePreview').addClass('hidden');
+        $(".image-preview").addClass('hidden');
+
+        // 啟用發送按鈕
+        $('#btnSendMessage').prop('disabled', false);
+    }
+
+    // 取消檔案上傳
+    function cancelFileUpload() {
+        // 清空檔案輸入
+        $('#fileInput, #imageInput').val('');
+
+        // 隱藏預覽
+        $('.file-preview').addClass('hidden');
+        $('#previewImage').addClass('hidden');
+        $('#previewFile').addClass('hidden');
+
+        // 禁用發送按鈕 (如果訊息框也是空的)
+        if ($('#messageInput').val().trim() === '') {
+            $('#btnSendMessage').prop('disabled', true);
+        }
+    }
+
+    // 格式化檔案大小
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 獲取檔案圖示類別
+    function getFileIconClass(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+
+        switch (extension) {
+            case 'pdf': return 'pdf';
+            case 'doc': case 'docx': return 'doc';
+            case 'xls': case 'xlsx': return 'xls';
+            case 'ppt': case 'pptx': return 'ppt';
+            case 'zip': case 'rar': case '7z': return 'zip';
+            case 'txt': return 'txt';
+            default: return '';
+        }
+    }
+
+    // 獲取檔案圖示
+    function getFileIcon(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+
+        switch (extension) {
+            case 'pdf': return 'fa-file-pdf';
+            case 'doc': case 'docx': return 'fa-file-word';
+            case 'xls': case 'xlsx': return 'fa-file-excel';
+            case 'ppt': case 'pptx': return 'fa-file-powerpoint';
+            case 'zip': case 'rar': case '7z': return 'fa-file-archive';
+            case 'txt': return 'fa-file-alt';
+            default: return 'fa-file';
+        }
+    }
+
+    // 發送檔案訊息
+    async function sendFileMessage(file, messageText) {
+        try {
+            // 獲取當前聊天室資訊
+            const userId = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')).userId;
+            const friendId = $('.friend-item.selected').data('id');
+
+            if (!friendId) {
+                console.error('未選擇對話對象');
+                return;
+            }
+
+            // 準備表單數據
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('senderId', userId);
+            formData.append('receiverId', friendId);
+            formData.append('messageType', 'file');
+            formData.append('messageContent', messageText || file.name);
+
+            // 顯示上傳中訊息
+            const tempMessageId = 'temp-' + Date.now();
+            addSelfMessage({
+                messageId: tempMessageId,
+                messageType: 'file',
+                messageContent: file.name,
+                fileName: file.name,
+                fileSize: file.size,
+                createDate: new Date(),
+                isUploading: true
+            });
+
+            // 發送檔案
+            const response = await $.ajax({
+                url: '/api/chat/uploadFile',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function () {
+                    const xhr = new window.XMLHttpRequest();
+
+                    // 上傳進度
+                    xhr.upload.addEventListener('progress', function (evt) {
+                        if (evt.lengthComputable) {
+                            const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                            // 這裡可以更新上傳進度
+                            updateUploadProgress(tempMessageId, percentComplete);
+                        }
+                    }, false);
+
+                    return xhr;
+                }
+            });
+
+            if (response.success) {
+                // 移除臨時訊息
+                $(`#${tempMessageId}`).remove();
+
+                // 通過 SignalR 發送訊息通知
+                await connection.invoke('SendMessage', {
+                    senderId: userId,
+                    receiverId: friendId,
+                    messageContent: response.data.fileName,
+                    messageType: 'file',
+                    fileUrl: response.data.fileUrl,
+                    fileName: response.data.fileName,
+                    fileSize: response.data.fileSize
+                });
+            } else {
+                // 更新臨時訊息狀態為失敗
+                updateMessageStatus(tempMessageId, 'failed');
+                errorAlert('檔案上傳失敗', response.message, 2000);
+            }
+        } catch (error) {
+            console.error('發送檔案訊息錯誤:', error);
+            errorAlert('檔案上傳失敗', '請稍後再試', 2000);
+        }
+    }
+
+    // 發送文本訊息
+    async function sendTextMessage(text) {
+        try {
+            // 獲取當前聊天室資訊
+            const userId = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')).userId;
+            const friendId = $('.friend-item.selected').data('id');
+
+            if (!friendId) {
+                console.error('未選擇對話對象');
+                return;
+            }
+
+            // 通過 SignalR 發送訊息
+            await connection.invoke('SendMessage', {
+                senderId: userId,
+                receiverId: friendId,
+                messageContent: text,
+                messageType: 'text'
+            });
+        } catch (error) {
+            console.error('發送文本訊息錯誤:', error);
+            errorAlert('發送訊息失敗', '請稍後再試', 2000);
+        }
+    }
+
+    // 更新上傳進度
+    function updateUploadProgress(messageId, percent) {
+        const $message = $(`#${messageId}`);
+        const $progress = $message.find('.upload-progress');
+
+        if ($progress.length) {
+            $progress.css('width', `${percent}%`);
+        } else {
+            $message.find('.message-status').append(`
+                <div class="upload-progress-container">
+                    <div class="upload-progress" style="width: ${percent}%"></div>
+                </div>
+            `);
+        }
+    }
+
+    // 更新訊息狀態
+    function updateMessageStatus(messageId, status) {
+        const $message = $(`#${messageId}`);
+
+        if (status === 'sent') {
+            $message.find('.message-status').html('<i class="fas fa-check"></i>');
+        } else if (status === 'read') {
+            $message.find('.message-status').html('<i class="fas fa-check-double"></i>');
+        } else if (status === 'failed') {
+            $message.find('.message-status').html('<i class="fas fa-exclamation-circle"></i>');
+        }
+    }
+
+    // 下載檔案
+    function downloadFile(url, fileName) {
+        // 創建一個暫時的 <a> 元素
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName; // 指定下載的檔案名稱
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // 初始化聊天室中的檔案相關事件
+    function initializeFileEvents() {
+        // 綁定聊天室中檔案下載點擊事件
+        $(document).on('click', '.file-download', function (e) {
+            e.stopPropagation();
+            const fileUrl = $(this).data('url');
+            const fileName = $(this).data('name');
+
+            if (fileUrl && fileName) {
+                downloadFile(fileUrl, fileName);
+            }
+        });
+    }
+
+    // 渲染檔案訊息
+    function renderFileMessage(message) {
+        const iconClass = getFileIcon(message.fileName);
+        const fileTypeClass = getFileIconClass(message.fileName);
+        const fileSize = formatFileSize(message.fileSize);
+
+        return `
+            <div class="message-file">
+                <div class="file-icon ${fileTypeClass}">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="file-details">
+                    <div class="file-name">${message.fileName}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+                <div class="file-download" data-url="${message.fileUrl}" data-name="${message.fileName}">
+                    <i class="fas fa-download"></i>
+                </div>
+            </div>
+        `;
+    }
+
+    // 添加自己發送的訊息到聊天室
+    function addSelfMessage(message) {
+        let messageContent = '';
+
+        // 根據訊息類型生成內容
+        if (message.messageType === 'image') {
+            messageContent = `<div class="message-image"><img src="${message.mediaUrl}" class="message-img"></div>`;
+        } else if (message.messageType === 'file') {
+            const iconClass = getFileIcon(message.fileName);
+            const fileTypeClass = getFileIconClass(message.fileName);
+            const fileSize = formatFileSize(message.fileSize);
+
+            messageContent = `
+                <div class="message-file">
+                    <div class="file-icon ${fileTypeClass}">
+                        <i class="fas ${iconClass}"></i>
+                    </div>
+                    <div class="file-details">
+                        <div class="file-name">${message.fileName}</div>
+                        <div class="file-size">${fileSize}</div>
+                    </div>
+                    ${message.isUploading ? '' : `
+                    <div class="file-download" data-url="${message.fileUrl}" data-name="${message.fileName}">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    `}
+                </div>
+            `;
+        } else {
+            messageContent = `<div class="message-text">${message.messageContent}</div>`;
+        }
+
+        // 構建訊息 HTML
+        const messageHtml = `
+            <div class="message sent" id="${message.messageId}">
+                <div class="message-content">
+                    ${messageContent}
+                    <div class="message-info">
+                        <span class="message-time">${formatTime(message.createDate)}</span>
+                        <span class="message-status">
+                            ${message.isUploading ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-check"></i>'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 添加到訊息容器
+        $('.messages-list').append(messageHtml);
+
+        // 滾動到底部
+        scrollToBottom();
     }
 </script>

@@ -247,6 +247,36 @@ namespace Chatman.Controllers
         #endregion
 
         #region //Add
+        #endregion
+
+        #region //Update
+        [HttpPost("api/chat/markAsRead")]
+        public async Task<IActionResult> MarkMessagesAsRead([FromBody] ChatMessage message)
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(HttpContext);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "用戶未登入" });
+                }
+
+                var response = await _chatService.UpdateMessagesAsReadAsync(message.SenderId, user.UserId);
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
+        #endregion
+
+        #region //Delete
+
+        #endregion
+
+        #region //File
         #region //上傳圖片
         [HttpPost("api/chat/uploadImage")]
         public async Task<IActionResult> UploadImage()
@@ -321,33 +351,83 @@ namespace Chatman.Controllers
             }
         }
         #endregion
-        #endregion
 
-        #region //Update
-        [HttpPost("api/chat/markAsRead")]
-        public async Task<IActionResult> MarkMessagesAsRead([FromBody] ChatMessage message)
+        #region //上傳圖片
+        [HttpPost("api/chat/uploadFile")]
+        public async Task<IActionResult> UploadFile()
         {
             try
             {
-                var user = WebHelper.GetCurrentUser(HttpContext);
-                if (user == null)
+                var userInfo = WebHelper.GetCurrentUser(HttpContext);
+                if (userInfo == null)
                 {
-                    return Unauthorized(new { success = false, message = "用戶未登入" });
+                    return BadRequest(new { success = false, message = "用戶未登入!" });
                 }
 
-                var response = await _chatService.UpdateMessagesAsReadAsync(message.SenderId, user.UserId);
-                return StatusCode(response.StatusCode, response);
+                var receiverId = HttpContext.Request.Form["receiverId"];
+                if (string.IsNullOrEmpty(receiverId))
+                {
+                    return BadRequest(new { success = false, message = "缺少接收者ID" });
+                }
+
+                var file = Request.Form.Files[0];
+                if (file == null)
+                {
+                    return BadRequest(new { success = false, message = "缺少文件" });
+                }
+
+                // 檢查文件是否為圖片
+                var fileType = HttpContext.Request.Form["fileType"];
+                if (fileType == "image" && !file.ContentType.StartsWith("image/"))
+                {
+                    return BadRequest(new { success = false, message = "僅支援圖片格式" });
+                }
+
+                // 檢查文件大小 (5MB上限)
+                if (file.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new { success = false, message = "圖片大小不能超過5MB" });
+                }
+
+                // 創建儲存路徑
+                string uploadsFolder = Path.Combine(_hostingEnvironment.WebRootPath, "uploads", "chat_files");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                // 生成唯一文件名
+                string uniqueFileName = $"{Guid.NewGuid()}_{ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"')}";
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                // 保存文件
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+
+                // 返回文件URL
+                string fileUrl = $"/uploads/chat_files/{uniqueFileName}";
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "檔案上傳成功",
+                    data = new
+                    {
+                        url = fileUrl,
+                        fileName = uniqueFileName,
+                        fileType
+                    }
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤");
-                return StatusCode(500, ServiceResponse<bool>.ServerError());
+                _logger.LogError(ex, "上傳檔案失敗");
+                return StatusCode(500, new { success = false, message = "上傳檔案時發生錯誤" });
             }
         }
         #endregion
-
-        #region //Delete
-
         #endregion
     }
 }

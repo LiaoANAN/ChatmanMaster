@@ -163,6 +163,9 @@ public class ChatHub : Hub
     {
         try
         {
+            // 檢查請求中是否包含檔案資訊
+            bool isFileMessage = request.MessageType == "file";
+
             // 儲存訊息到資料庫
             var messageId = await _chatService.SaveMessageAsync(new ChatMessage
             {
@@ -192,6 +195,14 @@ public class ChatHub : Hub
                 CreateDate = DateTime.Now,
                 IsRead = false
             };
+
+            // 如果是檔案訊息，添加檔案相關資訊
+            if (isFileMessage)
+            {
+                response.FileName = request.FileName;
+                response.FileSize = request.FileSize;
+                response.FileUrl = request.FileUrl;
+            }
 
             // 發送給接收者
             await Clients.Group(request.ReceiverId.ToString())
