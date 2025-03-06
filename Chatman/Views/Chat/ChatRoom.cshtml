@@ -35,7 +35,7 @@
     </div>
 
     <!-- 檔案預覽區域 -->
-    <div class="file-preview hidden">
+    <div id="filePreview" class="file-preview hidden">
         <div class="preview-content">
             <!-- 檔案預覽 -->
             <div id="previewFile" class="hidden">
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <div id="filePreview" class="file-preview hidden image-preview">
+    <div id="imagePreview" class="file-preview hidden image-preview">
         <div class="preview-content">
             <img src="" alt="preview" id="previewImage">
             <div class="preview-actions">
@@ -134,6 +134,29 @@
             <div class="message-info">
                 <span class="message-time"></span>
                 <span class="message-status"></span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- 檔案訊息模板 - 添加頭像支持 -->
+<template id="file-message-template">
+    <div class="message" data-message-id="">
+        <div class="message-avatar">
+            <img src="" alt="avatar" class="user-avatar">
+        </div>
+        <div class="message-content">
+            <div class="message-file">
+                <div class="file-icon">
+                    <i class="fas"></i>
+                </div>
+                <div class="file-details">
+                    <div class="file-name"></div>
+                    <div class="file-size"></div>
+                </div>
+                <div class="file-download" data-url="" data-name="">
+                    <i class="fas fa-download"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -240,7 +263,7 @@
 
         // 移除預覽按鈕事件
         $('#removePreview').click(function () {
-            $('#filePreview').addClass('hidden');
+            $('#imagePreview').addClass('hidden');
             $('#imageInput').val(''); // 清空檔案選擇
         });
 
@@ -438,7 +461,8 @@
         const friendId = selectedFriend.data('id');
 
         // 檢查是否有文字訊息或文件預覽
-        const hasFilePreview = !$('#filePreview').hasClass('hidden');
+        let hasFilePreview = !$('#imagePreview').hasClass('hidden');
+        hasFilePreview = !$('#hasFilePreview').hasClass('hidden');
 
         if (!message && !hasFilePreview) {
             return;
@@ -458,7 +482,7 @@
             const fileInput = $("#fileInput")[0];
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
-                sendFileMessage(file, message);
+                uploadFile(file, friendId, userInfo);
             }
         } else {
             // 處理文字訊息
@@ -489,7 +513,7 @@
 
         // 清空輸入框和預覽
         messageInput.val('');
-        $('#filePreview').addClass('hidden');
+        $('#imagePreview').addClass('hidden');
         $('#imageInput').val('');
 
         // 調整輸入框高度
@@ -569,9 +593,57 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             $('#previewImage').attr('src', e.target.result);
-            $('#filePreview').removeClass('hidden');
+            $('#imagePreview').removeClass('hidden');
         };
         reader.readAsDataURL(file);
+    }
+
+    function uploadFile(file, friendId, userInfo) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('receiverId', friendId);
+        formData.append('fileType', "file");
+
+        $.ajax({
+            url: '/api/chat/uploadFile',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // 使用 SignalR 發送圖片訊息
+                    connection.invoke("SendMessage", {
+                        senderId: userInfo.userId,
+                        receiverId: friendId,
+                        content: response.data.url,
+                        messageType: "file"
+                    }).catch(function (err) {
+                        console.error(err);
+                        alert('發送訊息失敗');
+                    });
+
+                    // 添加圖片訊息到聊天視窗
+                    const tempMessage = {
+                        messageId: 'temp-' + Date.now(),
+                        senderId: userInfo.userId,
+                        senderName: userInfo.userName,
+                        senderAvatar: userInfo.userImage,
+                        content: response.data.url,
+                        messageType: 'file',
+                        createDate: new Date(),
+                        isRead: false
+                    };
+
+                    addMessageToChat(tempMessage, true);
+                } else {
+                    alert('上傳圖片失敗: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('上傳圖片失敗: ' + error);
+            }
+        });
     }
 
     // 渲染訊息
@@ -682,6 +754,21 @@
 
             messageElement.find('img').attr('src', message.content);
             messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+            messagesContainer.append(messageElement);
+        }
+        else if (message.messageType === 'file') {
+            const template = document.getElementById('file-message-template');
+            const messageDiv = document.importNode(template.content, true);
+
+            const messageElement = $(messageDiv).find('.message');
+            messageElement.addClass(isSent ? 'sent' : 'received');
+            messageElement.attr('data-message-id', message.messageId);
+
+            messageElement.find('img').attr('src', message.content);
+            messageElement.find('.file-name').text(message.fileName);
+            messageElement.find('.file-size').text(message.fileSize);
+            messageElement.find('.file-download').attr('data-url', message.fileUrl);
 
             messagesContainer.append(messageElement);
         } else {
@@ -1476,7 +1563,7 @@
         // 處理檔案選擇
         $('#fileInput').change(function (e) {
             $("#imageInput").val("");
-            $('#filePreview').addClass('hidden');
+            $('#imagePreview').addClass('hidden');
 
             const file = e.target.files[0];
             if (!file) return;
@@ -1539,7 +1626,7 @@
         $('.file-preview').removeClass('hidden');
 
         $('#previewImage').addClass('hidden');
-        $('#filePreview').addClass('hidden');
+        $('#imagePreview').addClass('hidden');
         $(".image-preview").addClass('hidden');
 
         // 啟用發送按鈕

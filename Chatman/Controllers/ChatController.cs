@@ -352,7 +352,7 @@ namespace Chatman.Controllers
         }
         #endregion
 
-        #region //上傳圖片
+        #region //上傳檔案
         [HttpPost("api/chat/uploadFile")]
         public async Task<IActionResult> UploadFile()
         {
