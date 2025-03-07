@@ -15,5 +15,9 @@
         public DateTime? UpdateDate { get; set; }
         public int CreateUserId { get; set; }
         public int? UpdateUserId { get; set; }
+
+        public string FileName { get; set; }
+        public int? FileSize { get; set; }
+        public string FileUrl { get; set; }
     }
 }

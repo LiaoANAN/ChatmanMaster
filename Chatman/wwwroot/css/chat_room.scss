@@ -685,52 +685,60 @@
 .message-file {
     display: flex;
     align-items: center;
-    padding: 0.5rem;
-    background: #f3f4f6;
-    border-radius: 0.5rem;
-    width: 280px;
-    max-width: 100%;
-    margin-bottom: 4px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 280px;
 }
 
 .message.sent .message-file {
-    background: rgba(255, 255, 255, 0.2);
+    background-color: rgba(16, 185, 129, 0.9);
+    color: white;
 }
 
 .file-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 40px;
     height: 40px;
     border-radius: 4px;
-    background: white;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-right: 10px;
-    color: #6b7280;
-    font-size: 1.5rem;
+    flex-shrink: 0;
 }
 
 .message.sent .file-icon {
-    background: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.file-icon i {
+    font-size: 20px;
+    color: #6b7280;
+}
+
+.message.sent .file-icon i {
     color: white;
 }
 
 .file-details {
     flex: 1;
-    min-width: 0;
+    min-width: 0; /* 防止溢出 */
+    margin-right: 10px;
 }
 
 .file-name {
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 500;
+    margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 2px;
 }
 
 .file-size {
-    font-size: 0.75rem;
+    font-size: 12px;
     color: #6b7280;
 }
 
@@ -739,74 +747,95 @@
 }
 
 .file-download {
-    margin-left: 8px;
-    padding: 4px;
-    color: #10b981;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
 }
 
 .message.sent .file-download {
-    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .file-download:hover {
-    transform: translateY(-2px);
+    background-color: #e5e7eb;
 }
 
-/* 檔案類型顏色 */
-.file-icon.pdf {
-    color: #ef4444;
+.message.sent .file-download:hover {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
-.file-icon.doc, .file-icon.docx {
-    color: #2563eb;
-}
-
-.file-icon.xls, .file-icon.xlsx {
-    color: #16a34a;
-}
-
-.file-icon.ppt, .file-icon.pptx {
-    color: #ea580c;
-}
-
-.file-icon.zip, .file-icon.rar {
-    color: #8b5cf6;
-}
-
-.file-icon.txt {
+.file-download i {
+    font-size: 14px;
     color: #6b7280;
 }
 
-/* 檔案上傳預覽樣式 */
-.file-info {
-    display: flex;
-    align-items: center;
-    background: #f9fafb;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
+.message.sent .file-download i {
+    color: white;
 }
 
-.file-info i {
-    font-size: 24px;
-    margin-right: 10px;
-    color: #6b7280;
+/* 文件类型特定颜色 */
+.file-pdf .fas {
+    color: #f56565; /* 红色 */
 }
 
-.file-info #fileName {
-    font-weight: 500;
-    margin-right: 8px;
+.file-word .fas {
+    color: #3182ce; /* 蓝色 */
+}
+
+.file-excel .fas {
+    color: #38a169; /* 绿色 */
+}
+
+.file-powerpoint .fas {
+    color: #ed8936; /* 橙色 */
+}
+
+.file-archive .fas {
+    color: #805ad5; /* 紫色 */
+}
+
+.file-text .fas {
+    color: #718096; /* 灰色 */
+}
+
+.file-image .fas {
+    color: #6366f1; /* 靛蓝色 */
+}
+
+.file-audio .fas {
+    color: #ea5545; /* 粉色 */
+}
+
+.file-video .fas {
+    color: #ef4444; /* 红色 */
+}
+
+/* 上传进度样式 */
+.upload-progress-container {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    margin-top: 4px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 180px;
 }
 
-.file-info #fileSize {
-    color: #9ca3af;
-    font-size: 0.75rem;
+.upload-progress {
+    height: 100%;
+    background-color: #10b981;
+    width: 0%;
+    transition: width 0.3s ease-in-out;
+}
+
+.message.sent .upload-progress {
+    background-color: white;
 }
 
 /* 響應式調整 */

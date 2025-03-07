@@ -25,7 +25,7 @@ namespace Chatman.Repositories
                 int offset = (pageNumber - 1) * pageSize;
 
                 sql = @"SELECT MessageId, SenderId, ReceiverId, MessageType, Content, 
-                               MediaUrl, IsRead, IsDelete, Status, CreateDate
+                               FileName, FileSize, MediaUrl, IsRead, IsDelete, Status, CreateDate
                         FROM CHAT.Message
                         WHERE ((SenderId = @UserId AND ReceiverId = @FriendId) 
                            OR (SenderId = @FriendId AND ReceiverId = @UserId))
@@ -269,12 +269,12 @@ namespace Chatman.Repositories
             try
             {
                 sql = @"INSERT INTO CHAT.Message (
-                            SenderId, ReceiverId, MessageType, Content, MediaUrl, IsRead, IsDelete, Status,
+                            SenderId, ReceiverId, MessageType, Content, FileName, FileSize, MediaUrl, IsRead, IsDelete, Status,
                             CreateDate
                         ) 
                         OUTPUT INSERTED.MessageId 
                         VALUES (
-                            @SenderId, @ReceiverId, @MessageType, @Content, @MediaUrl, @IsRead, @IsDelete, @Status,
+                            @SenderId, @ReceiverId, @MessageType, @Content, @FileName, @FileSize, @MediaUrl, @IsRead, @IsDelete, @Status,
                             @CreateDate
                         )";
 

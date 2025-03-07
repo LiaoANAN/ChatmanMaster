@@ -8,6 +8,6 @@
         public string MessageType { get; set; } = "T";  // 預設為文字訊息
         public string FileName { get; set; }
         public int FileSize { get; set; }
-        public string FileUrl { get; set; }
+        public string MediaUrl { get; set; }
     }
 }

@@ -9,6 +9,8 @@ CREATE TABLE CHAT.Message (
     ReceiverId         INT             NOT NULL,                      -- 接收者ID
     MessageType        NVARCHAR(10)    NOT NULL,                      -- 訊息類型(text, image, file, etc)
     Content           NVARCHAR(MAX)   NOT NULL,                      -- 訊息內容
+    FileName          NVARCHAR(255)           NULL,                  -- 檔案名稱  
+	FileSize				INT           NULL,                  -- 檔案大小
     MediaUrl          NVARCHAR(500)       NULL,                      -- 媒體文件URL
     IsRead            BIT             NOT NULL DEFAULT 0,            -- 是否已讀
     IsDelete          BIT             NOT NULL DEFAULT 0,            -- 是否已刪除

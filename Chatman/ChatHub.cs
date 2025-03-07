@@ -173,6 +173,9 @@ public class ChatHub : Hub
                 ReceiverId = request.ReceiverId,
                 Content = request.Content,
                 MessageType = request.MessageType,
+                FileName = request.FileName,
+                FileSize = request.FileSize,
+                MediaUrl = request.MessageType == "file" ? request.Content : null, // 对于文件类型，URL在MessageContent中
                 Status = "A",
                 IsRead = false,
                 IsDelete = false,
@@ -193,7 +196,10 @@ public class ChatHub : Hub
                 Content = request.Content,
                 MessageType = request.MessageType,
                 CreateDate = DateTime.Now,
-                IsRead = false
+                IsRead = false,
+                FileName = request.FileName,
+                FileSize = request.FileSize,
+                MediaUrl = request.MessageType == "file" ? request.Content : null
             };
 
             // 如果是檔案訊息，添加檔案相關資訊
@@ -201,7 +207,7 @@ public class ChatHub : Hub
             {
                 response.FileName = request.FileName;
                 response.FileSize = request.FileSize;
-                response.FileUrl = request.FileUrl;
+                response.MediaUrl = request.MediaUrl;
             }
 
             // 發送給接收者
