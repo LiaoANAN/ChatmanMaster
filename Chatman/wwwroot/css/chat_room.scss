@@ -965,6 +965,180 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
+/* 回覆訊息樣式 */
+.reply-container {
+    margin-bottom: 4px;
+    padding: 6px 8px;
+    border-left: 2px solid #10b981;
+    background-color: rgba(16, 185, 129, 0.05);
+    border-radius: 4px;
+    font-size: 0.85em;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.message.sent .reply-container {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-left: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.reply-sender {
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 2px;
+    font-size: 0.85em;
+}
+
+.message.sent .reply-sender {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.reply-content {
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.message.sent .reply-content {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* 圖片回覆和檔案回覆樣式 */
+.reply-image-preview {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+.reply-file-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.reply-file-icon {
+    color: #6b7280;
+}
+
+.message.sent .reply-file-icon {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* 回覆訊息輸入區域樣式 */
+.reply-bar {
+    position: relative;
+    padding: 8px 12px;
+    background-color: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.reply-bar.hidden {
+    display: none;
+}
+
+.reply-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-to {
+    font-size: 0.75rem;
+    color: #10b981;
+    font-weight: 500;
+}
+
+.reply-preview {
+    font-size: 0.85rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reply-preview-image {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 3px;
+    margin-left: 5px;
+}
+
+.reply-preview-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #6b7280;
+    margin-left: 5px;
+}
+
+.reply-preview-file i {
+    font-size: 1rem;
+}
+
+.reply-close {
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #6b7280;
+}
+
+.reply-close:hover {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+/* 反向強調當前回覆的訊息 */
+.message.highlight-reply {
+    position: relative;
+}
+
+.message.highlight-reply::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(16, 185, 129, 0.05);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.message.sent.highlight-reply::after {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 點擊回覆跳轉動畫 */
+@keyframes pulse-reply {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.message.pulse-reply {
+    animation: pulse-reply 1s;
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
     .chat-header {

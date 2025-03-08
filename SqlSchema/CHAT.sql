@@ -12,6 +12,12 @@ CREATE TABLE CHAT.Message (
     FileName          NVARCHAR(255)           NULL,                  -- 檔案名稱  
 	FileSize				INT           NULL,                  -- 檔案大小
     MediaUrl          NVARCHAR(500)       NULL,                      -- 媒體文件URL
+    ReplyToMessageId    INT NULL,                                   --回覆訊息ID
+    ReplyToSenderName   NVARCHAR(100) NULL,                         --回覆者名稱
+    ReplyToContent      NVARCHAR(MAX) NULL,                         --回覆訊息內容
+    ReplyToMessageType      NVARCHAR(10) NULL,                      --回覆訊息類別
+    ReplyToImageUrl         NVARCHAR(500) NULL,                     --回復訊息圖片URL
+    ReplyToFileName         NVARCHAR(500) NULL,                     --回覆訊息檔案名稱                 
     IsRead            BIT             NOT NULL DEFAULT 0,            -- 是否已讀
     IsDelete          BIT             NOT NULL DEFAULT 0,            -- 是否已刪除
     Status            NVARCHAR(1)     NOT NULL,                      -- 狀態(A:正常 R:已收回)

@@ -107,13 +107,19 @@
     </div>
 </div>
 
-<!-- 修改後的文字訊息模板 - 添加頭像支持 -->
+<!-- 文字訊息模板 -->
 <template id="message-template">
-    <div class="message" data-message-id="">
+    <div class="message" data-message-id="" data-message-type="text">
         <div class="message-avatar">
             <img src="" alt="avatar" class="user-avatar">
         </div>
         <div class="message-content">
+            <!-- 回覆容器 - 默認隱藏 -->
+            <div class="reply-container" style="display: none;" data-reply-to="">
+                <div class="reply-sender"></div>
+                <div class="reply-content"></div>
+                <!-- 圖片或檔案回覆預覽將動態插入這裡 -->
+            </div>
             <div class="message-text"></div>
             <div class="message-info">
                 <span class="message-time"></span>
@@ -123,13 +129,19 @@
     </div>
 </template>
 
-<!-- 修改後的圖片訊息模板 - 添加頭像支持 -->
+<!-- 圖片訊息模板 -->
 <template id="image-message-template">
-    <div class="message" data-message-id="">
+    <div class="message" data-message-id="" data-message-type="image">
         <div class="message-avatar">
             <img src="" alt="avatar" class="user-avatar">
         </div>
         <div class="message-content">
+            <!-- 回覆容器 - 默認隱藏 -->
+            <div class="reply-container" style="display: none;" data-reply-to="">
+                <div class="reply-sender"></div>
+                <div class="reply-content"></div>
+                <!-- 圖片或檔案回覆預覽將動態插入這裡 -->
+            </div>
             <div class="message-image">
                 <img src="" alt="image message" loading="lazy" class="message-img">
             </div>
@@ -141,14 +153,19 @@
     </div>
 </template>
 
-<!-- 檔案訊息模板 - 添加頭像支持 -->
-<!-- 檔案訊息模板 - 添加訊息類型屬性 -->
+<!-- 檔案訊息模板 -->
 <template id="file-message-template">
     <div class="message" data-message-id="" data-message-type="file">
         <div class="message-avatar">
             <img src="" alt="avatar" class="user-avatar">
         </div>
         <div class="message-content">
+            <!-- 回覆容器 - 默認隱藏 -->
+            <div class="reply-container" style="display: none;" data-reply-to="">
+                <div class="reply-sender"></div>
+                <div class="reply-content"></div>
+                <!-- 圖片或檔案回覆預覽將動態插入這裡 -->
+            </div>
             <div class="message-file">
                 <div class="file-icon">
                     <i class="fas"></i>
@@ -168,6 +185,17 @@
         </div>
     </div>
 </template>
+
+<!-- 回覆狀態欄 -->
+<div class="reply-bar hidden" id="replyBar">
+    <div class="reply-info">
+        <div class="reply-to">正在回覆 <span id="replyToName"></span></div>
+        <div class="reply-preview" id="replyPreview"></div>
+    </div>
+    <div class="reply-close" id="closeReply">
+        <i class="fas fa-times"></i>
+    </div>
+</div>
 
 <!-- 圖片查看器模態框 -->
 <div id="imageViewerModal" class="modal hidden">
@@ -225,6 +253,9 @@
     let currentFriendId = null;
     let hasLoadedAllNewerMessages = true;
     let isFirstNewerLoad = true;
+    let currentReplyTo = null; // 存儲當前正在回覆的訊息ID
+    let replyToInfo = null; // 存儲當前回覆訊息的詳情
+    let currentMessageElement = null;
 
     function initializeChatRoom() {
         // 監聽接收訊息事件
@@ -482,6 +513,8 @@
         initializeMessageContextMenu();
 
         setupMessageRetractedListener();
+
+        initializeReplyMessage();
     }
 
     function initializeMobileChatView() {
@@ -790,6 +823,10 @@
                     messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
                 }
 
+                if (message.replyTo) {
+                    addReplyContent(messageElement, message.replyTo);
+                }
+
                 // 設置圖片
                 if (isRetracted) {
                     // 如果訊息已收回，顯示收回提示
@@ -815,6 +852,10 @@
                 // 設置頭像
                 if (!isSent) {
                     messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+                }
+
+                if (message.replyTo) {
+                    addReplyContent(messageElement, message.replyTo);
                 }
 
                 const fileUrl = message.content;
@@ -873,6 +914,10 @@
                     messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
                 }
 
+                if (message.replyTo) {
+                    addReplyContent(messageElement, message.replyTo);
+                }
+
                 // 設置訊息文字
                 if (isRetracted) {
                     // 如果訊息已收回，顯示收回提示
@@ -916,6 +961,7 @@
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
             messageElement.attr('data-message-type', 'image');
+            messageElement.attr('data-status', 'A');
 
             if (!isSent) {
                 messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
@@ -929,6 +975,10 @@
                 messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
             }
 
+            if (message.replyTo) {
+                addReplyContent(messageElement, message.replyTo);
+            }
+
             messagesContainer.append(messageElement);
         }
         else if (message.messageType === 'file') {
@@ -940,9 +990,14 @@
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
             messageElement.attr('data-message-type', 'file');
+            messageElement.attr('data-status', 'A');
 
             if (!isSent) {
                 messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+            }
+
+            if (message.replyTo) {
+                addReplyContent(messageElement, message.replyTo);
             }
 
             // 設置檔案信息
@@ -978,9 +1033,14 @@
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
             messageElement.attr('data-message-type', 'text');
+            messageElement.attr('data-status', 'A');
 
             if (!isSent) {
                 messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+            }
+
+            if (message.replyTo) {
+                addReplyContent(messageElement, message.replyTo);
             }
 
             messageElement.find('.message-text').text(message.content || message.messageContent);
@@ -2087,7 +2147,6 @@
     function initializeMessageContextMenu() {
         const $contextMenu = $('#messageContextMenu');
         let currentMessageId = null;
-        let currentMessageElement = null;
         let isSentMessage = false;
         let messageType = '';
         let messageContent = '';
@@ -2139,6 +2198,10 @@
             $contextMenu.addClass('active');
 
             return false;
+        });
+
+        $('#menuReply').on('click', function () {
+            $contextMenu.removeClass('active');
         });
 
         // 定位右鍵選單
@@ -2198,13 +2261,6 @@
         $('#menuForward').on('click', function () {
             // 目前尚未實作，可以顯示一個 Modal 讓用戶選擇轉發對象
             showToast('轉發功能尚未實作');
-            $contextMenu.removeClass('active');
-        });
-
-        // 回覆訊息
-        $('#menuReply').on('click', function () {
-            // 目前尚未實作
-            showToast('回覆功能尚未實作');
             $contextMenu.removeClass('active');
         });
     }
@@ -2338,5 +2394,296 @@
                 $(this).remove();
             });
         }, 3000);
+    }
+
+    // 初始化回覆訊息功能
+    function initializeReplyMessage() {
+        // 為回覆選單項添加點擊事件
+        $('#menuReply').on('click', function () {
+            const messageElement = currentMessageElement;
+            if (!messageElement) return;
+
+            // 獲取需要的訊息資訊
+            const messageId = messageElement.data('message-id');
+            const messageType = messageElement.data('message-type');
+            const senderId = messageElement.data('sender-id');
+
+            // 根據訊息類型獲取內容
+            let messageContent = '';
+            let previewContent = '';
+            let extraContent = null;
+
+            if (messageType === 'text') {
+                messageContent = messageElement.find('.message-text').text();
+                previewContent = messageContent.length > 50 ? messageContent.slice(0, 50) + '...' : messageContent;
+            } else if (messageType === 'image') {
+                messageContent = '[圖片]';
+                previewContent = messageContent;
+                extraContent = messageElement.find('.message-img').attr('src');
+            } else if (messageType === 'file') {
+                const fileName = messageElement.find('.file-name').text();
+                messageContent = '[檔案] ' + fileName;
+                previewContent = messageContent;
+                extraContent = {
+                    fileName: fileName,
+                    fileIcon: messageElement.find('.file-icon i').attr('class')
+                };
+            }
+
+            // 獲取發送者姓名
+            let senderName = '';
+            if (messageElement.hasClass('sent')) {
+                // 如果是自己發送的訊息
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+                senderName = userInfo.userName || '我';
+            } else {
+                // 如果是對方發送的訊息
+                senderName = $('.chat-user-name').text() || '對方';
+            }
+
+            // 儲存回覆訊息資訊
+            replyToInfo = {
+                messageId: messageId,
+                messageType: messageType,
+                senderId: senderId,
+                senderName: senderName,
+                content: messageContent,
+                previewContent: previewContent,
+                extraContent: extraContent
+            };
+
+            // 顯示回覆訊息狀態欄
+            showReplyBar(replyToInfo);
+
+            // 高亮顯示當前被回覆的訊息
+            highlightReplyMessage(messageElement);
+
+            // 隱藏右鍵選單
+            $('#messageContextMenu').removeClass('active');
+
+            // 聚焦輸入框
+            $('#messageInput').focus();
+        });
+
+        // 為關閉回覆按鈕添加點擊事件
+        $('#closeReply').on('click', function () {
+            cancelReply();
+        });
+
+        // 添加Escape鍵取消回覆的功能
+        $(document).keydown(function (e) {
+            if (e.key === 'Escape' && replyToInfo !== null) {
+                cancelReply();
+            }
+        });
+
+        // 添加點擊回覆內容跳轉到原訊息的功能
+        $(document).on('click', '.reply-container', function () {
+            const replyToId = $(this).data('reply-to');
+            if (replyToId) {
+                scrollToAndHighlightMessage(replyToId);
+            }
+        });
+
+        // 修改發送訊息按鈕點擊事件，添加回覆功能
+        const originalSendFunction = window.sendMessage || function () { };
+        window.sendMessage = function () {
+            const messageText = $('#messageInput').val().trim();
+
+            // 檢查是否有足夠的內容可以發送
+            const hasText = messageText.length > 0;
+            const hasImage = !$('#imagePreview').hasClass('hidden');
+            const hasFile = !$('#filePreview').hasClass('hidden');
+
+            if (!hasText && !hasImage && !hasFile) {
+                return; // 沒有內容可發送
+            }
+
+            // 添加回覆訊息邏輯
+            if (replyToInfo) {
+                sendReplyMessage(messageText, replyToInfo);
+                cancelReply(); // 發送後取消回覆狀態
+            } else {
+                // 使用原始發送功能
+                originalSendFunction.call(window);
+            }
+        };
+    }
+
+    // 顯示回覆狀態欄
+    function showReplyBar(replyInfo) {
+        // 設置當前正在回覆的訊息ID
+        currentReplyTo = replyInfo.messageId;
+
+        // 更新回覆狀態欄內容
+        $('#replyToName').text(replyInfo.senderName);
+        $('#replyPreview').text(replyInfo.previewContent);
+
+        // 如果是圖片，添加預覽
+        if (replyInfo.messageType === 'image' && replyInfo.extraContent) {
+            $('#replyPreview').append(`<img class="reply-preview-image" src="${replyInfo.extraContent}" alt="圖片預覽">`);
+        }
+
+        // 如果是檔案，添加檔案圖標
+        if (replyInfo.messageType === 'file' && replyInfo.extraContent) {
+            const fileIcon = replyInfo.extraContent.fileIcon || 'fas fa-file';
+            $('#replyPreview').append(`<span class="reply-preview-file"><i class="${fileIcon}"></i>${replyInfo.extraContent.fileName}</span>`);
+        }
+
+        // 顯示回覆狀態欄
+        $('#replyBar').removeClass('hidden').insertBefore('.input-area');
+
+        // 調整輸入區域的位置
+        const replyBarHeight = $('#replyBar').outerHeight();
+        $('.input-area').css('margin-top', replyBarHeight + 'px');
+    }
+
+    // 取消回覆狀態
+    function cancelReply() {
+        // 重置回覆狀態
+        currentReplyTo = null;
+        replyToInfo = null;
+
+        // 隱藏回覆狀態欄
+        $('#replyBar').addClass('hidden');
+
+        // 恢複輸入區域的位置
+        $('.input-area').css('margin-top', '0');
+
+        // 移除被回覆訊息的高亮效果
+        $('.message.highlight-reply').removeClass('highlight-reply');
+    }
+
+    // 高亮顯示被回覆的訊息
+    function highlightReplyMessage(messageElement) {
+        // 移除其他訊息的高亮效果
+        $('.message.highlight-reply').removeClass('highlight-reply');
+
+        // 添加高亮效果到當前被回覆的訊息
+        messageElement.addClass('highlight-reply');
+    }
+
+    // 發送回覆訊息
+    function sendReplyMessage(messageText, replyInfo) {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+            const friendId = $('.friend-item.selected').data('id');
+
+            if (!userInfo || !friendId) {
+                showToast('發送失敗，請重新選擇對話對象', 'error');
+                return;
+            }
+
+            // 創建回覆訊息對象
+            const replyMessage = {
+                senderId: userInfo.userId,
+                receiverId: friendId,
+                content: messageText,
+                messageType: 'text',
+                replyTo: {
+                    messageId: replyInfo.messageId,
+                    senderName: replyInfo.senderName,
+                    content: replyInfo.content,
+                    messageType: replyInfo.messageType
+                }
+            };
+
+            // 如果回覆的是圖片或檔案，添加額外資訊
+            if (replyInfo.messageType === 'image') {
+                replyMessage.replyTo.imageUrl = replyInfo.extraContent;
+            } else if (replyInfo.messageType === 'file') {
+                replyMessage.replyTo.fileName = replyInfo.extraContent.fileName;
+            }
+
+            // 使用 SignalR 發送訊息
+            connection.invoke("SendReplyMessage", replyMessage)
+                .catch(function (err) {
+                    console.error('發送回覆訊息失敗:', err);
+                    showToast('發送回覆訊息失敗', 'error');
+                });
+
+            // 樂觀更新 UI
+            const tempMessage = {
+                messageId: 'temp-' + Date.now(),
+                senderId: userInfo.userId,
+                senderName: userInfo.userName,
+                senderAvatar: userInfo.userImage,
+                content: messageText,
+                messageType: 'text',
+                createDate: new Date(),
+                isRead: false,
+                replyTo: replyInfo
+            };
+
+            addMessageToChat(tempMessage, true);
+
+            // 清空輸入框
+            $('#messageInput').val('');
+        } catch (error) {
+            console.error('發送回覆訊息異常:', error);
+            showToast('發送失敗，請稍後再試', 'error');
+        }
+    }
+
+    // 跳轉並高亮顯示特定ID的訊息
+    function scrollToAndHighlightMessage(messageId) {
+        const $message = $(`.message[data-message-id="${messageId}"]`);
+        if (!$message.length) {
+            // 如果找不到訊息，可能需要載入更多歷史記錄
+            showToast('找不到原始訊息，可能已被刪除或在較早的聊天記錄中', 'info');
+            return;
+        }
+
+        // 取消正在進行的所有動畫
+        $message.stop(true, true);
+
+        // 計算訊息在視窗中的位置
+        const $container = $('.messages-container');
+        const containerTop = $container.offset().top;
+        const messageTop = $message.offset().top;
+        const scrollTop = $container.scrollTop();
+
+        // 滾動到訊息位置
+        $container.animate({
+            scrollTop: scrollTop + (messageTop - containerTop) - ($container.height() / 3)
+        }, 300, function () {
+            // 滾動完成後高亮顯示
+            $message.addClass('pulse-reply');
+
+            // 3秒後移除高亮效果
+            setTimeout(function () {
+                $message.removeClass('pulse-reply');
+            }, 3000);
+        });
+    }
+
+    // 添加回覆內容到訊息元素
+    function addReplyContent(messageElement, replyInfo) {
+        const replyContainer = messageElement.find('.reply-container');
+        replyContainer.data('reply-to', replyInfo.messageId);
+        replyContainer.find('.reply-sender').text(replyInfo.senderName);
+
+        // 根據回覆訊息類型設置內容
+        if (replyInfo.messageType === 'image') {
+            // 添加圖片預覽
+            replyContainer.find('.reply-content').text('[圖片]');
+            if (replyInfo.imageUrl) {
+                const imagePreview = $('<img class="reply-image-preview" alt="圖片預覽">').attr('src', replyInfo.imageUrl);
+                replyContainer.find('.reply-content').append(imagePreview);
+            }
+        } else if (replyInfo.messageType === 'file') {
+            // 添加檔案預覽
+            const fileContent = $('<div class="reply-file-info"></div>');
+            const fileIcon = getFileIcon(replyInfo.fileName || 'file');
+            fileContent.append(`<i class="fas ${fileIcon} reply-file-icon"></i>`);
+            fileContent.append(`<span>${replyInfo.fileName || '[檔案]'}</span>`);
+            replyContainer.find('.reply-content').text('').append(fileContent);
+        } else {
+            // 文字訊息
+            replyContainer.find('.reply-content').text(replyInfo.content);
+        }
+
+        // 顯示回覆容器
+        replyContainer.show();
     }
 </script>

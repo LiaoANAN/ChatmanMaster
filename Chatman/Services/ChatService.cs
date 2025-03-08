@@ -75,7 +75,16 @@ namespace Chatman.Services
                         MessageType = m.MessageType,
                         CreateDate = m.CreateDate,
                         IsRead = m.IsRead,
-                        Status = m.Status
+                        Status = m.Status,
+                        ReplyTo = m.ReplyToMessageId.HasValue ? new ReplyInfo
+                        {
+                            MessageId = m.ReplyToMessageId.Value,
+                            SenderName = m.ReplyToSenderName,
+                            Content = m.ReplyToContent,
+                            MessageType = m.ReplyToMessageType,
+                            ImageUrl = m.ReplyToImageUrl,
+                            FileName = m.ReplyToFileName
+                        } : null
                     }).ToList();
 
                     return ServiceResponse<List<MessageResponse>>.ExcuteSuccess(messageResponses);

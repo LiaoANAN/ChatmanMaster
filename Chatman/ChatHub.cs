@@ -303,4 +303,63 @@ public class ChatHub : Hub
             throw;
         }
     }
+
+    // 發送回覆訊息
+    public async Task SendReplyMessage(ReplyMessageRequest request)
+    {
+        try
+        {
+            // 儲存訊息到資料庫
+            var messageId = await _chatService.SaveMessageAsync(new ChatMessage
+            {
+                SenderId = request.SenderId,
+                ReceiverId = request.ReceiverId,
+                Content = request.Content,
+                MessageType = request.MessageType,
+                Status = "A",
+                IsRead = false,
+                CreateDate = DateTime.Now,
+                CreateUserId = request.SenderId,
+                // 回覆訊息資訊
+                ReplyToMessageId = request.ReplyTo.MessageId,
+                ReplyToSenderName = request.ReplyTo.SenderName,
+                ReplyToContent = request.ReplyTo.Content,
+                ReplyToMessageType = request.ReplyTo.MessageType,
+                ReplyToImageUrl = request.ReplyTo.ImageUrl,
+                ReplyToFileName = request.ReplyTo.FileName
+            });
+
+            // 取得寄送訊息者的資料
+            var sender = await _userService.GetUserByIdAsync(request.SenderId);
+
+            // 建立回應物件
+            var response = new MessageResponse
+            {
+                MessageId = messageId,
+                SenderId = sender.UserId,
+                SenderName = sender.UserName,
+                SenderAvatar = sender.UserImage,
+                Content = request.Content,
+                MessageType = request.MessageType,
+                CreateDate = DateTime.Now,
+                IsRead = false,
+                // 回覆訊息資訊
+                ReplyTo = request.ReplyTo
+            };
+
+            // 發送給接收者
+            await Clients.Group(request.ReceiverId.ToString())
+                        .SendAsync("ReceiveReplyMessage", response);
+
+            // 發送回發送者（確認訊息已送達）
+            await Clients.Caller.SendAsync("MessageSent", response);
+
+            _logger.LogInformation($"回覆訊息已從 {request.SenderId} 發送給 {request.ReceiverId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "發送回覆訊息時發生錯誤");
+            throw;
+        }
+    }
 }

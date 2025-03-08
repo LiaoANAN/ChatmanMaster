@@ -14,5 +14,6 @@
         public int? FileSize { get; set; }
         public string MediaUrl { get; set; }
         public string Status { get; set; }
+        public ReplyInfo ReplyTo { get; set; }
     }
 }

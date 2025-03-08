@@ -15,9 +15,14 @@
         public DateTime? UpdateDate { get; set; }
         public int CreateUserId { get; set; }
         public int? UpdateUserId { get; set; }
-
         public string FileName { get; set; }
         public int? FileSize { get; set; }
         public string FileUrl { get; set; }
+        public int? ReplyToMessageId { get; set; }
+        public string ReplyToSenderName { get; set; }
+        public string ReplyToContent { get; set; }
+        public string ReplyToMessageType { get; set; }
+        public string ReplyToImageUrl { get; set; }
+        public string ReplyToFileName { get; set; }
     }
 }

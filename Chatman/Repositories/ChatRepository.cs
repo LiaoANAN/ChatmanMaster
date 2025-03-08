@@ -25,7 +25,9 @@ namespace Chatman.Repositories
                 int offset = (pageNumber - 1) * pageSize;
 
                 sql = @"SELECT MessageId, SenderId, ReceiverId, MessageType, Content, 
-                               FileName, FileSize, MediaUrl, IsRead, IsDelete, Status, CreateDate
+                               FileName, FileSize, MediaUrl, IsRead, IsDelete, Status, CreateDate,
+                               ReplyToMessageId, ReplyToSenderName, ReplyToContent,
+                               ReplyToMessageType, ReplyToImageUrl, ReplyToFileName
                         FROM CHAT.Message
                         WHERE ((SenderId = @UserId AND ReceiverId = @FriendId) 
                            OR (SenderId = @FriendId AND ReceiverId = @UserId))
@@ -270,13 +272,15 @@ namespace Chatman.Repositories
             try
             {
                 sql = @"INSERT INTO CHAT.Message (
-                            SenderId, ReceiverId, MessageType, Content, FileName, FileSize, MediaUrl, IsRead, IsDelete, Status,
-                            CreateDate
-                        ) 
-                        OUTPUT INSERTED.MessageId 
+                            SenderId, ReceiverId, MessageType, Content, IsRead, Status, CreateDate,
+                            ReplyToMessageId, ReplyToSenderName, ReplyToContent, ReplyToMessageType, 
+                            ReplyToImageUrl, ReplyToFileName
+                        )
+                        OUTPUT INSERTED.MessageId
                         VALUES (
-                            @SenderId, @ReceiverId, @MessageType, @Content, @FileName, @FileSize, @MediaUrl, @IsRead, @IsDelete, @Status,
-                            @CreateDate
+                            @SenderId, @ReceiverId, @MessageType, @Content, @IsRead, @Status, @CreateDate,
+                            @ReplyToMessageId, @ReplyToSenderName, @ReplyToContent, @ReplyToMessageType,
+                            @ReplyToImageUrl, @ReplyToFileName
                         )";
 
                 return await sqlConnection.ExecuteScalarAsync<int>(sql, message);
