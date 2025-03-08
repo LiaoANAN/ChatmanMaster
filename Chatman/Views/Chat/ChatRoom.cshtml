@@ -783,6 +783,7 @@
                 messageElement.attr('data-message-id', message.messageId);
                 messageElement.attr('data-is-read', message.isRead ? "true" : "false");
                 messageElement.attr('data-sender-id', message.senderId); // 添加發送者ID
+                messageElement.attr('data-status', message.status);
 
                 // 設置頭像
                 if (!isSent) {
@@ -809,6 +810,7 @@
                 messageElement.attr('data-message-id', message.messageId);
                 messageElement.attr('data-is-read', message.isRead ? "true" : "false");
                 messageElement.attr('data-sender-id', message.senderId); // 添加發送者ID
+                messageElement.attr('data-status', message.status);
 
                 // 設置頭像
                 if (!isSent) {
@@ -864,6 +866,7 @@
                 messageElement.attr('data-message-id', message.messageId);
                 messageElement.attr('data-is-read', message.isRead ? "true" : "false");
                 messageElement.attr('data-sender-id', message.senderId); // 添加發送者ID
+                messageElement.attr('data-status', message.status);
 
                 // 設置頭像
                 if (!isSent) {
@@ -2081,96 +2084,6 @@
             });
     }
 
-    // 初始化聊天室中的檔案相關事件
-    function initializeFileEvents() {
-        // 綁定聊天室中檔案下載點擊事件
-        $(document).on('click', '.file-download', function (e) {
-            e.stopPropagation();
-            const fileUrl = $(this).data('url');
-            const fileName = $(this).data('name');
-
-            if (fileUrl && fileName) {
-                downloadFile(fileUrl, fileName);
-            }
-        });
-    }
-
-    // 渲染檔案訊息
-    function renderFileMessage(message) {
-        const iconClass = getFileIcon(message.fileName);
-        const fileTypeClass = getFileIconClass(message.fileName);
-        const fileSize = formatFileSize(message.fileSize);
-
-        return `
-            <div class="message-file">
-                <div class="file-icon ${fileTypeClass}">
-                    <i class="fas ${iconClass}"></i>
-                </div>
-                <div class="file-details">
-                    <div class="file-name">${message.fileName}</div>
-                    <div class="file-size">${fileSize}</div>
-                </div>
-                <div class="file-download" data-url="${message.fileUrl}" data-name="${message.fileName}">
-                    <i class="fas fa-download"></i>
-                </div>
-            </div>
-        `;
-    }
-
-    // 添加自己發送的訊息到聊天室
-    function addSelfMessage(message) {
-        let messageContent = '';
-
-        // 根據訊息類型生成內容
-        if (message.messageType === 'image') {
-            messageContent = `<div class="message-image"><img src="${message.mediaUrl}" class="message-img"></div>`;
-        } else if (message.messageType === 'file') {
-            const iconClass = getFileIcon(message.fileName);
-            const fileTypeClass = getFileIconClass(message.fileName);
-            const fileSize = formatFileSize(message.fileSize);
-
-            messageContent = `
-                <div class="message-file">
-                    <div class="file-icon ${fileTypeClass}">
-                        <i class="fas ${iconClass}"></i>
-                    </div>
-                    <div class="file-details">
-                        <div class="file-name">${message.fileName}</div>
-                        <div class="file-size">${fileSize}</div>
-                    </div>
-                    ${message.isUploading ? '' : `
-                    <div class="file-download" data-url="${message.fileUrl}" data-name="${message.fileName}">
-                        <i class="fas fa-download"></i>
-                    </div>
-                    `}
-                </div>
-            `;
-        } else {
-            messageContent = `<div class="message-text">${message.messageContent}</div>`;
-        }
-
-        // 構建訊息 HTML
-        const messageHtml = `
-            <div class="message sent" id="${message.messageId}">
-                <div class="message-content">
-                    ${messageContent}
-                    <div class="message-info">
-                        <span class="message-time">${formatTime(message.createDate)}</span>
-                        <span class="message-status">
-                            ${message.isUploading ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-check"></i>'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 添加到訊息容器
-        $('.messages-list').append(messageHtml);
-
-        // 滾動到底部
-        scrollToBottom();
-    }
-
     function initializeMessageContextMenu() {
         const $contextMenu = $('#messageContextMenu');
         let currentMessageId = null;
@@ -2186,7 +2099,12 @@
             // 儲存當前訊息的資訊
             currentMessageElement = $(this);
             currentMessageId = $(this).data('message-id');
+            currentMessageStatus = $(this).data('status');
             isSentMessage = $(this).hasClass('sent');
+
+            if (currentMessageStatus != "A"){
+                return false;
+            }
 
             // 判斷訊息類型
             if ($(this).find('.message-text').length > 0) {
