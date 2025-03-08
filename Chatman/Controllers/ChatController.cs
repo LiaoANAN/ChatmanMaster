@@ -270,6 +270,27 @@ namespace Chatman.Controllers
                 return StatusCode(500, ServiceResponse<bool>.ServerError());
             }
         }
+
+        [HttpPost("api/chat/retractMessage")]
+        public async Task<IActionResult> RetractMessage([FromBody] RetractMessageRequest request)
+        {
+            try
+            {
+                var userInfo = WebHelper.GetCurrentUser(this.HttpContext);
+                if (userInfo == null || userInfo.UserId != request.SenderId)
+                {
+                    return Unauthorized(new { success = false, message = "未授權的操作" });
+                }
+
+                var response = await _chatService.RetractMessageAsync(request);
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "收回訊息失敗");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
         #endregion
 
         #region //Delete

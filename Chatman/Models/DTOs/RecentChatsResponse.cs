@@ -17,5 +17,6 @@ namespace Chatman.Models.DTOs
         public bool IsRead { get; set; }
         public int UnreadCount { get; set; }
         public DateTime CreateDate { get; set; }
+        public string Status { get; set; }
     }
 }

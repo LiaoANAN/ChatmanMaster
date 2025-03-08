@@ -142,8 +142,9 @@
 </template>
 
 <!-- 檔案訊息模板 - 添加頭像支持 -->
+<!-- 檔案訊息模板 - 添加訊息類型屬性 -->
 <template id="file-message-template">
-    <div class="message" data-message-id="">
+    <div class="message" data-message-id="" data-message-type="file">
         <div class="message-avatar">
             <img src="" alt="avatar" class="user-avatar">
         </div>
@@ -195,6 +196,27 @@
     </div>
 </div>
 
+<!-- 訊息右鍵選單 -->
+<div id="messageContextMenu" class="message-context-menu">
+    <div class="menu-item" id="menuForward">
+        <i class="fas fa-share"></i>
+        <span>轉發訊息</span>
+    </div>
+    <div class="menu-item" id="menuCopy">
+        <i class="fas fa-copy"></i>
+        <span>複製訊息</span>
+    </div>
+    <div class="menu-item" id="menuReply">
+        <i class="fas fa-reply"></i>
+        <span>回覆訊息</span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item danger" id="menuRetract">
+        <i class="fas fa-trash-alt"></i>
+        <span>收回訊息</span>
+    </div>
+</div>
+
 <script>
     // 初始化變數
     let currentPage = 1;
@@ -226,8 +248,42 @@
 
         // 監聽訊息發送成功事件
         connection.on("MessageSent", function (message) {
-            // 更新 UI 中的訊息狀態
-            updateMessageStatus(message.messageId, true);
+            // 查找可能的臨時訊息
+            const tempMessages = $('.message[data-message-id^="temp-"]');
+            let messageUpdated = false;
+
+            // 遍歷所有臨時訊息，查找最新的一條
+            if (tempMessages.length > 0) {
+                // 按創建時間降序排序臨時訊息
+                const sortedMessages = Array.from(tempMessages).sort((a, b) => {
+                    const timeA = parseInt($(a).data('message-id').split('-')[1]);
+                    const timeB = parseInt($(b).data('message-id').split('-')[1]);
+                    return timeB - timeA; // 降序排序
+                });
+
+                // 取最新的臨時訊息
+                const $latestTempMessage = $(sortedMessages[0]);
+
+                // 更新 DOM 元素的 messageId 和狀態
+                $latestTempMessage.attr('data-message-id', message.messageId);
+                $latestTempMessage.find('.message-status').html('<i class="fas fa-check"></i>');
+
+                // 如果是檔案訊息，更新檔案 URL
+                if (message.messageType === 'file' && message.fileUrl) {
+                    $latestTempMessage.find('.file-download').attr('data-url', message.fileUrl);
+                }
+
+                messageUpdated = true;
+            }
+
+            // 如果沒有找到對應的臨時訊息，則可能是其他設備發送的
+            if (!messageUpdated) {
+                // 更新與此訊息 ID 相關的任何 DOM 元素
+                const $message = $(`.message[data-message-id="${message.messageId}"]`);
+                if ($message.length > 0) {
+                    $message.find('.message-status').html('<i class="fas fa-check"></i>');
+                }
+            }
         });
 
         // 註冊發送訊息的事件處理
@@ -422,6 +478,10 @@
         initializeImageViewer();
 
         initializeFileUpload();
+
+        initializeMessageContextMenu();
+
+        setupMessageRetractedListener();
     }
 
     function initializeMobileChatView() {
@@ -574,6 +634,21 @@
         formData.append('receiverId', friendId);
         formData.append('fileType', "image");
 
+        // 創建臨時訊息 ID
+        const tempMessageId = 'temp-' + Date.now();
+
+        // 添加臨時訊息到聊天視窗
+        addMessageToChat({
+            messageId: tempMessageId,
+            senderId: userInfo.userId,
+            senderName: userInfo.userName,
+            senderAvatar: userInfo.userImage,
+            content: URL.createObjectURL(file), // 使用臨時 URL 顯示圖片
+            messageType: 'image',
+            createDate: new Date(),
+            isRead: false
+        }, true);
+
         $.ajax({
             url: '/api/chat/uploadFile',
             type: 'POST',
@@ -593,19 +668,9 @@
                         alert('發送訊息失敗');
                     });
 
-                    // 添加圖片訊息到聊天視窗
-                    const tempMessage = {
-                        messageId: 'temp-' + Date.now(),
-                        senderId: userInfo.userId,
-                        senderName: userInfo.userName,
-                        senderAvatar: userInfo.userImage,
-                        content: response.data.url,
-                        messageType: 'image',
-                        createDate: new Date(),
-                        isRead: false
-                    };
-
-                    addMessageToChat(tempMessage, true);
+                    // 找到臨時訊息元素並標記為發送中
+                    const $tempMessage = $(`.message[data-message-id="${tempMessageId}"]`);
+                    $tempMessage.find('.message-status').html('<i class="fas fa-spinner fa-spin"></i>');
                 } else {
                     alert('上傳圖片失敗: ' + response.message);
                 }
@@ -706,6 +771,8 @@
         // 添加訊息到容器
         messages.forEach(message => {
             const isSent = message.senderId == userInfo.userId;
+            const isRetracted = message.status === 'R'; // 檢查訊息是否已收回
+
             if (message.messageType === 'image') {
                 // 圖片訊息
                 const template = document.getElementById('image-message-template');
@@ -723,7 +790,12 @@
                 }
 
                 // 設置圖片
-                messageElement.find('.message-image img.message-img').attr('src', message.content);
+                if (isRetracted) {
+                    // 如果訊息已收回，顯示收回提示
+                    messageElement.find('.message-image').html('<div class="retracted-text">此圖片已收回</div>');
+                } else {
+                    messageElement.find('.message-image img.message-img').attr('src', message.content);
+                }
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 messagesContainer.append(messageElement);
@@ -766,11 +838,17 @@
                     fileSizeDisplay = formatFileSize(message.fileSize);
                 }
 
-                messageElement.find('.file-icon i').addClass(iconClass);
-                messageElement.find('.file-name').text(fileName);
-                messageElement.find('.file-size').text(fileSizeDisplay);
-                messageElement.find('.file-download').attr('data-url', fileUrl);
-                messageElement.find('.file-download').attr('data-name', fileName);
+                if (isRetracted) {
+                    messageElement.find('.file-details').html('<div class="retracted-text">此檔案已收回</div>');
+                    messageElement.find('.file-download').remove(); // 移除下載按鈕
+                }
+                else{
+                    messageElement.find('.file-icon i').addClass(iconClass);
+                    messageElement.find('.file-name').text(fileName);
+                    messageElement.find('.file-size').text(fileSizeDisplay);
+                    messageElement.find('.file-download').attr('data-url', fileUrl);
+                    messageElement.find('.file-download').attr('data-name', fileName);
+                }
 
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
@@ -793,7 +871,12 @@
                 }
 
                 // 設置訊息文字
-                messageElement.find('.message-text').text(message.content);
+                if (isRetracted) {
+                    // 如果訊息已收回，顯示收回提示
+                    messageElement.find('.message-text').html('<span class="retracted-text">此訊息已收回</span>');
+                } else {
+                    messageElement.find('.message-text').text(message.content);
+                }
                 messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
                 if (isSent) {
@@ -829,50 +912,58 @@
             const messageElement = $(messageDiv).find('.message');
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
+            messageElement.attr('data-message-type', 'image');
 
-            messageElement.find('img').attr('src', message.content);
+            if (!isSent) {
+                messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
+            }
+
+            messageElement.find('img.message-img').attr('src', message.content);
             messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+            // 如果是發送的訊息，添加狀態指示
+            if (isSent) {
+                messageElement.find('.message-status').html('<i class="fas fa-check"></i>');
+            }
 
             messagesContainer.append(messageElement);
         }
         else if (message.messageType === 'file') {
+            // 使用檔案訊息模板
             const template = document.getElementById('file-message-template');
             const messageDiv = document.importNode(template.content, true);
 
             const messageElement = $(messageDiv).find('.message');
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
+            messageElement.attr('data-message-type', 'file');
 
             if (!isSent) {
                 messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
             }
 
-            let fileName = "未知文件";
-            if (message.fileName) {
-                fileName = message.fileName;
-            } else if (message.content) {
-                const urlParts = message.content.split('/');
-                if (urlParts.length > 0) {
-                    fileName = decodeURIComponent(urlParts[urlParts.length - 1]);
-                }
-            }
-
-            const iconClass = getFileIcon(fileName);
-            messageElement.find('.file-icon i').addClass(iconClass);
-
+            // 設置檔案信息
+            const fileName = message.fileName || 'file';
             messageElement.find('.file-name').text(fileName);
+            messageElement.find('.file-size').text(formatFileSize(message.fileSize || 0));
 
-            let fileSizeText = "未知大小";
-            if (message.fileSize) {
-                fileSizeText = formatFileSize(message.fileSize);
+            // 設置檔案圖標
+            const fileIcon = getFileIcon(fileName);
+            messageElement.find('.file-icon i').addClass(fileIcon);
+
+            // 設置下載連結
+            if (message.fileUrl) {
+                messageElement.find('.file-download')
+                    .attr('data-url', message.fileUrl)
+                    .attr('data-name', fileName);
             }
-            messageElement.find('.file-size').text(fileSizeText);
-
-            const fileUrl = message.content;
-            messageElement.find('.file-download').attr('data-url', fileUrl);
-            messageElement.find('.file-download').attr('data-name', fileName);
 
             messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
+
+            // 如果是發送的訊息，添加狀態指示
+            if (isSent) {
+                messageElement.find('.message-status').html('<i class="fas fa-clock"></i>');
+            }
 
             messagesContainer.append(messageElement);
         } else {
@@ -883,12 +974,13 @@
             const messageElement = $(messageDiv).find('.message');
             messageElement.addClass(isSent ? 'sent' : 'received');
             messageElement.attr('data-message-id', message.messageId);
+            messageElement.attr('data-message-type', 'text');
 
             if (!isSent) {
                 messageElement.find('.message-avatar img').attr('src', message.senderAvatar);
             }
 
-            messageElement.find('.message-text').text(message.content);
+            messageElement.find('.message-text').text(message.content || message.messageContent);
             messageElement.find('.message-time').text(formatTimeForMessage(new Date(message.createDate)));
 
             if (isSent) {
@@ -2077,5 +2169,256 @@
 
         // 滾動到底部
         scrollToBottom();
+    }
+
+    function initializeMessageContextMenu() {
+        const $contextMenu = $('#messageContextMenu');
+        let currentMessageId = null;
+        let currentMessageElement = null;
+        let isSentMessage = false;
+        let messageType = '';
+        let messageContent = '';
+
+        // 禁用訊息的默認右鍵選單
+        $(document).on('contextmenu', '.message', function (event) {
+            event.preventDefault();
+
+            // 儲存當前訊息的資訊
+            currentMessageElement = $(this);
+            currentMessageId = $(this).data('message-id');
+            isSentMessage = $(this).hasClass('sent');
+
+            // 判斷訊息類型
+            if ($(this).find('.message-text').length > 0) {
+                messageType = 'text';
+                messageContent = $(this).find('.message-text').text();
+            } else if ($(this).find('.message-image').length > 0) {
+                messageType = 'image';
+                messageContent = $(this).find('.message-img').attr('src');
+            } else if ($(this).find('.message-file').length > 0) {
+                messageType = 'file';
+                messageContent = $(this).find('.file-name').text();
+            }
+
+            // 只有自己發送的訊息才能收回
+            if (isSentMessage) {
+                $('#menuRetract').show();
+            } else {
+                $('#menuRetract').hide();
+            }
+
+            // 調整複製選單項的顯示
+            if (messageType === 'text') {
+                $('#menuCopy').show();
+            } else {
+                $('#menuCopy').hide();
+            }
+
+            // 調整選單顯示位置
+            positionContextMenu(event);
+
+            // 顯示選單
+            $contextMenu.addClass('active');
+
+            return false;
+        });
+
+        // 定位右鍵選單
+        function positionContextMenu(event) {
+            const windowWidth = $(window).width();
+            const windowHeight = $(window).height();
+            const menuWidth = $contextMenu.outerWidth();
+            const menuHeight = $contextMenu.outerHeight();
+
+            // 初始位置為滑鼠點擊位置
+            let left = event.clientX;
+            let top = event.clientY;
+
+            // 確保選單不會超出視窗右側
+            if (left + menuWidth > windowWidth) {
+                left = windowWidth - menuWidth - 10;
+            }
+
+            // 確保選單不會超出視窗底部
+            if (top + menuHeight > windowHeight) {
+                top = windowHeight - menuHeight - 10;
+            }
+
+            // 設置選單位置
+            $contextMenu.css({
+                left: left + 'px',
+                top: top + 'px'
+            });
+        }
+
+        // 點擊其他區域關閉選單
+        $(document).on('click', function (event) {
+            if (!$(event.target).closest('#messageContextMenu').length) {
+                $contextMenu.removeClass('active');
+            }
+        });
+
+        // 複製訊息
+        $('#menuCopy').on('click', function () {
+            if (messageType === 'text' && currentMessageElement) {
+                const textToCopy = currentMessageElement.find('.message-text').text();
+                copyToClipboard(textToCopy);
+                showToast('已複製訊息');
+            }
+            $contextMenu.removeClass('active');
+        });
+
+        // 收回訊息
+        $('#menuRetract').on('click', function () {
+            if (currentMessageId && isSentMessage) {
+                retractMessage(currentMessageId, currentMessageElement, messageType);
+            }
+            $contextMenu.removeClass('active');
+        });
+
+        // 轉發訊息
+        $('#menuForward').on('click', function () {
+            // 目前尚未實作，可以顯示一個 Modal 讓用戶選擇轉發對象
+            showToast('轉發功能尚未實作');
+            $contextMenu.removeClass('active');
+        });
+
+        // 回覆訊息
+        $('#menuReply').on('click', function () {
+            // 目前尚未實作
+            showToast('回覆功能尚未實作');
+            $contextMenu.removeClass('active');
+        });
+    }
+
+    // 複製文字到剪貼簿
+    function copyToClipboard(text) {
+        // 創建臨時元素
+        const tempInput = document.createElement('textarea');
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+
+        // 選擇文字
+        tempInput.select();
+        tempInput.setSelectionRange(0, 99999);
+
+        // 複製
+        document.execCommand('copy');
+
+        // 移除臨時元素
+        document.body.removeChild(tempInput);
+    }
+
+    // 收回訊息
+    async function retractMessage(messageId, messageElement, messageType) {
+        try {
+            // 取得用戶資訊
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo'));
+            const friendId = $('.friend-item.selected').data('id');
+
+            if (!userInfo || !friendId) {
+                showToast('無法收回訊息', 'error');
+                return;
+            }
+
+            // 調用收回訊息 API
+            const response = await $.ajax({
+                url: '/api/chat/retractMessage',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    messageId: messageId,
+                    senderId: userInfo.userId,
+                    receiverId: friendId,
+                    messageType: messageType // 添加訊息類型
+                })
+            });
+
+            if (response.success) {
+                // 更新 UI
+                updateRetractedMessageUI(messageElement, messageType);
+
+                // 通知對方使用 SignalR
+                connection.invoke("NotifyMessageRetracted", {
+                    messageId: messageId,
+                    senderId: userInfo.userId,
+                    receiverId: friendId,
+                    messageType: messageType // 添加訊息類型
+                }).catch(function (err) {
+                    console.error("通知訊息收回失敗: ", err);
+                });
+
+                showToast('訊息已收回');
+            } else {
+                showToast(response.message || '收回失敗', 'error');
+            }
+        } catch (error) {
+            console.error('收回訊息失敗:', error);
+            showToast('收回失敗，請稍後再試', 'error');
+        }
+    }
+
+    // 更新已收回訊息的 UI
+    function updateRetractedMessageUI(messageElement, messageType) {
+        // 添加收回狀態的類別
+        messageElement.addClass('retracted');
+
+        // 根據訊息類型進行不同的處理
+        if (messageType === 'text') {
+            // 替換原始訊息文字
+            const messageTextElement = messageElement.find('.message-text');
+            const originalText = messageTextElement.text();
+
+            messageTextElement.html(`
+                <span class="retracted-text">此訊息已收回</span>
+                <span style="display: none;">${originalText}</span>
+            `);
+        }
+        else if (messageType === 'image') {
+            // 替換圖片
+            const imageContainer = messageElement.find('.message-image');
+            imageContainer.html('<div class="retracted-text">此圖片已收回</div>');
+        }
+        else if (messageType === 'file') {
+            // 替換檔案資訊
+            const fileDetails = messageElement.find('.file-details');
+            const fileDownload = messageElement.find('.file-download');
+
+            fileDetails.html('<div class="retracted-text">此檔案已收回</div>');
+            fileDownload.remove(); // 移除下載按鈕
+        }
+    }
+
+    // 接收收回訊息的通知
+    function setupMessageRetractedListener() {
+        connection.on("MessageRetracted", function (data) {
+            // 找到對應的訊息
+            const messageElement = $(`.message[data-message-id="${data.messageId}"]`);
+            if (messageElement.length) {
+                updateRetractedMessageUI(messageElement, data.messageType);
+            }
+        });
+    }
+
+    function showToast(message, type = 'success') {
+        // 移除舊的 toast
+        $('.toast-notification').remove();
+
+        // 創建 toast 元素
+        const toast = $(`
+            <div class="toast-notification ${type}">
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            </div>
+        `).appendTo('body');
+
+        // 3 秒後自動消失
+        setTimeout(() => {
+            toast.fadeOut(300, function () {
+                $(this).remove();
+            });
+        }, 3000);
     }
 </script>

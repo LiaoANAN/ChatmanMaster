@@ -14,8 +14,9 @@ CREATE TABLE CHAT.Message (
     MediaUrl          NVARCHAR(500)       NULL,                      -- 媒體文件URL
     IsRead            BIT             NOT NULL DEFAULT 0,            -- 是否已讀
     IsDelete          BIT             NOT NULL DEFAULT 0,            -- 是否已刪除
-    Status            NVARCHAR(1)     NOT NULL,                      -- 狀態(A:正常)
+    Status            NVARCHAR(1)     NOT NULL,                      -- 狀態(A:正常 R:已收回)
     CreateDate        DATETIME        NOT NULL DEFAULT GETDATE(),    -- 發送時間
+    UpdateDate        DATETIME        NOT NULL DEFAULT GETDATE(),    -- 更改時間
     CONSTRAINT PK_Message PRIMARY KEY (MessageId),
     CONSTRAINT FK_Message_Sender FOREIGN KEY (SenderId) REFERENCES BAS.UserInfo(UserId),
     CONSTRAINT FK_Message_Receiver FOREIGN KEY (ReceiverId) REFERENCES BAS.UserInfo(UserId)

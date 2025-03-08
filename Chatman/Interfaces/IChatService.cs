@@ -22,6 +22,7 @@ namespace Chatman.Interfaces
 
         #region //Update
         Task<ServiceResponse<bool>> UpdateMessagesAsReadAsync(int senderId, int receiverId);
+        Task<ServiceResponse<bool>> RetractMessageAsync(RetractMessageRequest request);
         #endregion
 
         #region //Delete

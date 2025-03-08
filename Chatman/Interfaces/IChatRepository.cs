@@ -23,6 +23,7 @@ namespace Chatman.Interfaces
 
         #region //Update
         Task<bool> UpdateMessagesAsReadAsync(int senderId, int receiverId, SqlConnection sqlConnection);
+        Task<bool> RetractMessageAsync(int messageId, int senderId, SqlConnection sqlConnection);
         #endregion
         #region //Delete
 

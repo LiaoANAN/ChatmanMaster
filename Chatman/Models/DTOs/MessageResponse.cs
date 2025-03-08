@@ -13,5 +13,6 @@
         public string FileName { get; set; }
         public int? FileSize { get; set; }
         public string MediaUrl { get; set; }
+        public string Status { get; set; }
     }
 }

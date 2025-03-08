@@ -116,6 +116,7 @@ namespace Chatman.Repositories
                             rm.MediaUrl,
                             rm.IsRead,
                             rm.CreateDate,
+                            rm.Status,
                             -- 確定對話的另一方
                             CASE 
                                 WHEN rm.SenderId = @UserId THEN rm.ReceiverId
@@ -158,7 +159,7 @@ namespace Chatman.Repositories
         {
             try
             {
-                sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.ReceiverId FriendId, a.CreateDate
+                sql = @"SELECT a.MessageId, a.MessageType, a.Content , a.MediaUrl, a.SenderId, a.ReceiverId FriendId, a.CreateDate, a.Status
                         , b.UserName FriendName, b.UserImage FriendImage
                         FROM CHAT.Message a 
                         INNER JOIN BAS.UserInfo b ON a.SenderId = b.UserId
@@ -312,6 +313,27 @@ namespace Chatman.Repositories
             {
                 _logger.LogError(ex, "將訊息標記為已讀時發生錯誤: {SenderId}, {ReceiverId}", senderId, receiverId);
                 throw;
+            }
+        }
+
+        public async Task<bool> RetractMessageAsync(int messageId, int senderId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"UPDATE CHAT.Message 
+                        SET Status = 'R', -- R表示已收回
+                            UpdateDate = GETDATE()
+                        WHERE MessageId = @MessageId 
+                        AND SenderId = @SenderId";
+
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, new { MessageId = messageId, SenderId = senderId });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "收回訊息時發生錯誤: {MessageId}", messageId);
+                return false;
             }
         }
         #endregion

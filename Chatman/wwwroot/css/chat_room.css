@@ -810,6 +810,127 @@
   align-items: center;
 }
 
+/* 訊息右鍵選單 CSS */
+.message-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
+  border: 1px solid #e5e7eb;
+  display: none;
+}
+
+.message-context-menu.active {
+  display: block;
+}
+
+.menu-item {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background-color: #f9fafb;
+}
+
+.menu-item i {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.menu-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 4px 0;
+}
+
+.menu-item.danger {
+  color: #ef4444;
+}
+
+.menu-item.danger i {
+  color: #ef4444;
+}
+
+.menu-item.danger:hover {
+  background-color: #fee2e2;
+}
+
+/* 當訊息為撤回狀態時的樣式 */
+.message.retracted .message-content {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.message.sent.retracted .message-content {
+  background-color: rgba(16, 185, 129, 0.2);
+}
+
+/* 文字訊息收回樣式 */
+.message.retracted .message-text {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* 圖片訊息收回樣式 */
+.message.retracted .message-image {
+  min-width: 150px;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+}
+
+.message.sent.retracted .message-image {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* 檔案訊息收回樣式 */
+.message.retracted .message-file {
+  opacity: 0.7;
+}
+
+.message.retracted .file-icon {
+  opacity: 0.5;
+}
+
+.message.retracted .file-details {
+  min-width: 150px;
+}
+
+.message.retracted .message-status,
+.message.retracted .message-time {
+  opacity: 0.6;
+}
+
+/* 收回訊息的提示文字 */
+.retracted-text {
+  font-style: italic;
+  font-size: 0.9em;
+  color: #9ca3af;
+}
+
+.message.sent .retracted-text {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
   .chat-header {
@@ -909,6 +1030,16 @@
   }
   .image-viewer-container .close-btn {
     padding: 12px 20px; /* 在移動設備上增大點擊區域 */
+  }
+  /*訊息右鍵內容*/
+  .message-context-menu {
+    width: 80%;
+    max-width: 300px;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+  .menu-item {
+    padding: 12px 16px;
   }
 }
 /* 空聊天室提示 */

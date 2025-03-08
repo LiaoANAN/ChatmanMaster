@@ -74,7 +74,8 @@ namespace Chatman.Services
                         FileSize = m.FileSize,
                         MessageType = m.MessageType,
                         CreateDate = m.CreateDate,
-                        IsRead = m.IsRead
+                        IsRead = m.IsRead,
+                        Status = m.Status
                     }).ToList();
 
                     return ServiceResponse<List<MessageResponse>>.ExcuteSuccess(messageResponses);
@@ -267,6 +268,36 @@ namespace Chatman.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "將訊息標記為已讀時發生錯誤: {SenderId}, {ReceiverId}", senderId, receiverId);
+                return ServiceResponse<bool>.ServerError();
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> RetractMessageAsync(RetractMessageRequest request)
+        {
+            try
+            {
+                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    using (SqlConnection sqlConnection = _db.CreateConnection())
+                    {
+                        // 檢查權限 - 只有發送者可以收回自己的訊息
+                        // 也可以添加時間限制，例如只能收回 5 分鐘內的訊息
+
+                        var result = await _chatRepository.RetractMessageAsync(request.MessageId, request.SenderId, sqlConnection);
+
+                        if (!result)
+                        {
+                            return ServiceResponse<bool>.ExcuteError("收回訊息失敗或無權限收回此訊息");
+                        }
+
+                        transactionScope.Complete();
+                        return ServiceResponse<bool>.ExcuteSuccess(true, "訊息已收回");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "收回訊息失敗: {MessageId}", request.MessageId);
                 return ServiceResponse<bool>.ServerError();
             }
         }

@@ -265,17 +265,33 @@
         messages.forEach(message => {
             const formattedTime = formatMessageTime(new Date(message.createDate));
             const isUnread = message.unreadCount > 0;
+            const isRetracted = message.status === 'R'; // 檢查訊息是否已收回
 
             let previewContent = "";
             switch (message.messageType) {
                 case "image":
-                    previewContent = "[圖片]";
+                    if (isRetracted) {
+                        previewContent = "[圖片已被收回]";
+                    }
+                    else{
+                        previewContent = "[圖片]";
+                    }
                     break;
                 case "file":
-                    previewContent = "[檔案]";
+                    if (isRetracted) {
+                        previewContent = "[檔案已被收回]";
+                    }
+                    else {
+                        previewContent = "[檔案]";
+                    }
                     break;
                 default:
-                    previewContent = message.content;
+                    if (isRetracted) {
+                        previewContent = "[訊息已被收回]";
+                    }
+                    else {
+                        previewContent = message.content;
+                    }
                     break;
             }
 

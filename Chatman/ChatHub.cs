@@ -280,4 +280,27 @@ public class ChatHub : Hub
             throw;
         }
     }
+
+    // 通知訊息被收回
+    public async Task NotifyMessageRetracted(RetractMessageRequest request)
+    {
+        try
+        {
+            // 通知接收者訊息已被收回
+            await Clients.Group(request.ReceiverId.ToString())
+                .SendAsync("MessageRetracted", new
+                {
+                    request.MessageId,
+                    request.SenderId,
+                    request.MessageType
+                });
+
+            _logger.LogInformation($"已通知用戶 {request.ReceiverId} 訊息 {request.MessageId} 已被收回");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"通知訊息收回失敗: {request.MessageId}");
+            throw;
+        }
+    }
 }
