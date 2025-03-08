@@ -405,6 +405,31 @@ namespace Chatman.Repositories
                 return false;
             }
         }
+
+        public async Task<bool> UpdateAllMessagesAsReadAsync(int userId, SqlConnection sqlConnection)
+        {
+            try
+            {
+                sql = @"UPDATE BAS.Notification 
+                        SET IsRead = 1,
+                            UpdateDate = GETDATE(),
+                            UpdateUserId = @UserId
+                        WHERE UserId = @UserId
+                        AND IsRead = 0";
+
+                var rowsAffected = await sqlConnection.ExecuteAsync(sql, new
+                {
+                    UserId = userId
+                });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤: {userId}", userId);
+                throw;
+            }
+        }
         #endregion
 
         #region //Delete

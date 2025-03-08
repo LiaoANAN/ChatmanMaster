@@ -6,6 +6,7 @@ using Chatman.Models;
 using Newtonsoft.Json.Linq;
 using System.Security.Claims;
 using Chatman.Filters;
+using Chatman.Services;
 
 namespace Chatman.Controllers
 {
@@ -363,6 +364,27 @@ namespace Chatman.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Update ProFile failed");
+                return StatusCode(500, ServiceResponse<bool>.ServerError());
+            }
+        }
+
+        [HttpPost("api/user/markAllNotificationsAsRead")]
+        public async Task<IActionResult> MarkAllNotificationsAsRead()
+        {
+            try
+            {
+                var user = WebHelper.GetCurrentUser(HttpContext);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "用戶未登入" });
+                }
+
+                var response = await _userService.UpdateAllMessagesAsReadAsync(user.UserId);
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤");
                 return StatusCode(500, ServiceResponse<bool>.ServerError());
             }
         }

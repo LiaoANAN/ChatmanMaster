@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing.Tree;
 using Microsoft.AspNetCore.SignalR;
 using Chatman.Data;
 using System.Transactions;
+using Chatman.Repositories;
 
 namespace Chatman.Services
 {
@@ -472,6 +473,27 @@ namespace Chatman.Services
                 transactionScope.Complete();
             }
             return ServiceResponse<bool>.ExcuteSuccess();
+        }
+
+        public async Task<ServiceResponse<bool>> UpdateAllMessagesAsReadAsync(int userId)
+        {
+            try
+            {
+                using (TransactionScope transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    using (SqlConnection sqlConnection = _db.CreateConnection())
+                    {
+                        var result = await _userRepository.UpdateAllMessagesAsReadAsync(userId, sqlConnection);
+                        transactionScope.Complete();
+                        return ServiceResponse<bool>.ExcuteSuccess(result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "將訊息標記為已讀時發生錯誤: {userId}", userId);
+                return ServiceResponse<bool>.ServerError();
+            }
         }
         #endregion
 

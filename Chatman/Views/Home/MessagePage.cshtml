@@ -266,6 +266,19 @@
             const formattedTime = formatMessageTime(new Date(message.createDate));
             const isUnread = message.unreadCount > 0;
 
+            let previewContent = "";
+            switch (message.messageType) {
+                case "image":
+                    previewContent = "[圖片]";
+                    break;
+                case "file":
+                    previewContent = "[檔案]";
+                    break;
+                default:
+                    previewContent = message.content;
+                    break;
+            }
+
             const $messageItem = $(`
                     <div class="message-item ${isUnread ? 'unread' : ''}" data-id="${message.friendId}" data-name="${message.friendName}" data-message-id="${message.messageId}" data-sender-id="${message.senderId}" onclick="openChatRoomByList(this)">
                     <div class="message-avatar">
@@ -278,7 +291,7 @@
                             <span class="message-time">${formattedTime}</span>
                         </div>
                         <div class="message-preview">
-                            ${message.messageType === 'image' ? '[圖片]' : message.content}
+                            ${previewContent}
                         </div>
                     </div>
                     ${message.unreadCount > 0 ? `<div class="unread-badge message-list-unread-badge">${message.unreadCount}</div>` : ''}

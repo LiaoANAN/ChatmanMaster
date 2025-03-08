@@ -838,6 +838,11 @@
     background-color: white;
 }
 
+.function-btn {
+    display: flex;
+    align-items: center;
+}
+
 /* 響應式調整 */
 @media (max-width: 768px) {
     .chat-header {
@@ -888,11 +893,17 @@
         width: 100%;
     }
 
-    /* 調整聊天頭部區域在手機版的樣式 */
     .chat-header {
-        padding: 10px;
-        display: flex;
-        align-items: center;
+        padding: 0.75rem;
+        justify-content: flex-start; /* Change from space-between to flex-start */
+    }
+
+    .chat-actions {
+        margin-left: auto; /* Push actions to the right */
+    }
+
+    .back-button {
+        margin-right: 10px;
     }
 
     /* 調整訊息容器在手機版的樣式 */
