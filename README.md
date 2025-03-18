@@ -36,80 +36,12 @@
     <li>SignalR (即時 WebSocket 連線)</li>
     <li>SQL Server</li>
     <li>Dapper (高效 SQL 查詢)</li>
-    <li>Redis (快取與即時通知)</li>
 </ul>
-
-<hr>
-
-<h2>🎯 快速開始</h2>
-
-<h3>1️⃣ 環境準備</h3>
-<p>請確保你的環境已安裝以下工具：</p>
-<ul>
-    <li>Node.js 16+</li>
-    <li>.NET 8 SDK</li>
-    <li>SQL Server</li>
-    <li>Redis</li>
-</ul>
-
-<h3>2️⃣ 克隆專案</h3>
-<pre><code>git clone https://github.com/你的帳號/chatapp-web.git
-cd chatapp-web
-</code></pre>
-
-<h3>3️⃣ 安裝與啟動前端</h3>
-<pre><code>cd frontend
-npm install
-npm run dev
-</code></pre>
-
-<h3>4️⃣ 安裝與啟動後端</h3>
-<pre><code>cd backend
-dotnet restore
-dotnet run
-</code></pre>
-
-<h3>5️⃣ 設定環境變數 (.env)</h3>
-<p>請參考 <code>.env.example</code> 並填寫你的資料庫連線資訊。</p>
-
-<hr>
-
-<h2>📷 預覽截圖</h2>
-<table>
-    <tr>
-        <th>登入畫面</th>
-        <th>聊天室</th>
-        <th>群組聊天</th>
-    </tr>
-    <tr>
-        <td><img src="https://via.placeholder.com/200" alt="Login"></td>
-        <td><img src="https://via.placeholder.com/200" alt="Chat"></td>
-        <td><img src="https://via.placeholder.com/200" alt="GroupChat"></td>
-    </tr>
-</table>
-
-<hr>
-
-<h2>📜 授權條款</h2>
-<p>本專案基於 MIT 授權，詳細內容請參考 <a href="LICENSE">LICENSE</a> 文件。</p>
-
-<hr>
-
-<h2>🤝 貢獻指南</h2>
-<p>歡迎提交 Issue 或 PR，一起讓 ChatApp 更加完善！</p>
-<ol>
-    <li>Fork 本專案</li>
-    <li>創建新分支 (<code>git checkout -b feature-xxx</code>)</li>
-    <li>提交更改 (<code>git commit -m "新增 xxx 功能"</code>)</li>
-    <li>推送分支 (<code>git push origin feature-xxx</code>)</li>
-    <li>發送 PR</li>
-</ol>
 
 <hr>
 
 <h2>📬 聯絡方式</h2>
 <p>如果有任何問題，請透過以下方式聯絡我：</p>
 <ul>
-    <li>📧 Email: example@email.com</li>
-    <li>💬 Discord: mydiscord#1234</li>
+    <li>📧 Email: s32154104@gmail.com</li>
 </ul>
