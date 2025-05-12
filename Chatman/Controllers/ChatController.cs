@@ -49,7 +49,7 @@ namespace Chatman.Controllers
         {
             try
             {
-                string a = "2";
+                string a = "3";
 
                 var user = WebHelper.GetCurrentUser(HttpContext);
                 if (user == null)
