@@ -49,6 +49,8 @@ namespace Chatman.Controllers
         {
             try
             {
+                string a = "1";
+
                 var user = WebHelper.GetCurrentUser(HttpContext);
                 if (user == null)
                 {
